@@ -300,6 +300,7 @@ const Auth = {
     UI.updateStreakBadge();
     UI.renderStudy();
     DataManager.checkIn(appData.state);
+    showInstallButton();
   },
 
   async login(email, password) {
@@ -1024,28 +1025,46 @@ async function init() {
   await Auth.init();
 }
 
-// PWA Install prompt
+// PWA Install
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  // Show install button
-  const installBtn = document.getElementById('btn-install');
-  if (installBtn) installBtn.style.display = 'flex';
+  const btn = document.getElementById('btn-install');
+  if (btn) { btn.style.display = 'flex'; btn.textContent = '⬇️ 一键安装'; }
 });
 
-async function installPWA() {
+// Always show install button after login
+function showInstallButton() {
+  const btn = document.getElementById('btn-install');
+  if (!btn) return;
+  btn.style.display = 'flex';
   if (!deferredPrompt) {
-    alert('安装功能暂不可用。请使用 Chrome 浏览器打开。\n\n或使用地址栏右侧的安装图标。');
-    return;
+    btn.textContent = '⬇️ 安装';
+    btn.title = '点击查看安装方法';
   }
-  deferredPrompt.prompt();
-  const { outcome } = await deferredPrompt.userChoice;
-  if (outcome === 'accepted') {
-    const btn = document.getElementById('btn-install');
-    if (btn) btn.style.display = 'none';
+}
+
+async function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      const btn = document.getElementById('btn-install');
+      if (btn) btn.style.display = 'none';
+      deferredPrompt = null;
+      return;
+    }
+    deferredPrompt = null;
   }
-  deferredPrompt = null;
+  // Fallback: show manual instructions
+  const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+  const isEdge = /Edg/.test(navigator.userAgent);
+  if (isChrome || isEdge) {
+    alert('📱 安装方法：\n\n1. 点击地址栏右侧的 ⬇️🖥️ 图标\n2. 或按键盘 Ctrl+Shift+I → 顶部「应用」标签 → 安装\n\n如果没有看到安装图标，刷新页面后再试。');
+  } else {
+    alert('📱 请使用 Chrome 或 Edge 浏览器打开此页面，然后点击地址栏的安装图标。');
+  }
 }
 
 // Register Service Worker
