@@ -1331,7 +1331,6 @@ const Auth = {
       appData.words = getCachedWords();
       appData.state = getCachedState();
     }
-    initEvents();
     UI.updateStreakBadge();
     UI.renderStudy();
     DataManager.checkIn(appData.state);
@@ -1980,6 +1979,10 @@ const UI = {
 // EVENT HANDLERS
 // ============================================================================
 function initEvents() {
+  // Only bind once
+  if (initEvents._bound) return;
+  initEvents._bound = true;
+
   // Auth tabs
   document.querySelectorAll('.auth-tab').forEach(tab => {
     tab.addEventListener('click', function() {
@@ -2079,6 +2082,7 @@ function initEvents() {
 // INITIALIZATION
 // ============================================================================
 async function init() {
+  initEvents(); // Bind all events immediately
   await Auth.init();
 }
 
