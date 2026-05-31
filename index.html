@@ -278,6 +278,14 @@ input, textarea { width: 100%; }
 }
 #header .btn-icon:hover { background: var(--bg-subtle); color: var(--text); }
 
+#header .btn-install {
+  display: flex; align-items: center; gap: 4px;
+  padding: 8px 16px; background: var(--primary); color: #fff;
+  border-radius: 20px; font-size: 13px; font-weight: 700;
+  cursor: pointer; animation: popIn 0.3s ease; white-space: nowrap;
+}
+#header .btn-install:hover { background: var(--primary-dark); }
+
 #header .user-email {
   font-size: 12px;
   color: var(--text-tertiary);
@@ -1020,6 +1028,7 @@ input, textarea { width: 100%; }
       <span class="logo">Vocabulary</span>
       <span class="streak-badge" id="streak-badge">🔥 0天</span>
       <div class="header-right">
+        <button class="btn-install" id="btn-install" onclick="installPWA()" style="display:none;">⬇️ 安装</button>
         <span class="user-email" id="user-email-display"></span>
         <button class="btn-icon" id="btn-export" title="导入/导出">📦</button>
         <button class="btn-icon" id="btn-logout" title="退出登录">🚪</button>

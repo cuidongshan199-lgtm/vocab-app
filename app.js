@@ -1024,6 +1024,30 @@ async function init() {
   await Auth.init();
 }
 
+// PWA Install prompt
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show install button
+  const installBtn = document.getElementById('btn-install');
+  if (installBtn) installBtn.style.display = 'flex';
+});
+
+async function installPWA() {
+  if (!deferredPrompt) {
+    alert('安装功能暂不可用。请使用 Chrome 浏览器打开。\n\n或使用地址栏右侧的安装图标。');
+    return;
+  }
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    const btn = document.getElementById('btn-install');
+    if (btn) btn.style.display = 'none';
+  }
+  deferredPrompt = null;
+}
+
 // Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
