@@ -1068,20 +1068,176 @@ input, textarea { width: 100%; }
   </div>
 </div>
 
-<!-- ===== Supabase SDK ===== -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
 <script>
 // ============================================================================
-// CONFIGURATION — 部署时替换为你的 Supabase 信息
+// CONFIGURATION
 // ============================================================================
 const SUPABASE_URL = 'https://edibgrvefqfohlqsdfxs.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_kumBhObEHh7jpIbN6jnkjQ_JL7ZG2c1';
 
 // ============================================================================
-// UTILITIES
+// API HELPER — direct REST calls, no Supabase SDK needed
 // ============================================================================
-function uuid() {
+let accessToken = null;
+let refreshToken = null;
+
+function apiHeaders() {
+  const h = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' };
+  if (accessToken) h['Authorization'] = 'Bearer ' + accessToken;
+  return h;
+}
+
+async function apiFetch(path, options = {}) {
+  const url = SUPABASE_URL + path;
+  const res = await fetch(url, { ...options, headers: { ...apiHeaders(), ...options.headers } });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.msg || err.message || 'Request failed: ' + res.status);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// Auth API
+async function authSignup(email, password) {
+  const res = await fetch(SUPABASE_URL + '/auth/v1/signup', {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Signup failed');
+  if (data.access_token) {
+    accessToken = data.access_token;
+    refreshToken = data.refresh_token;
+    localStorage.setItem('vocab_session', JSON.stringify({ accessToken, refreshToken }));
+  }
+  return data;
+}
+
+async function authLogin(email, password) {
+  const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || data.error_description || 'Login failed');
+  accessToken = data.access_token;
+  refreshToken = data.refresh_token;
+  localStorage.setItem('vocab_session', JSON.stringify({ accessToken, refreshToken }));
+  return data;
+}
+
+async function authLogout() {
+  try {
+    await fetch(SUPABASE_URL + '/auth/v1/logout', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + accessToken },
+    });
+  } catch(e) {}
+  accessToken = null;
+  refreshToken = null;
+  localStorage.removeItem('vocab_session');
+}
+
+async function authGetUser() {
+  const res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + accessToken },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function authRefresh() {
+  if (!refreshToken) return false;
+  try {
+    const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    const data = await res.json();
+    if (!res.ok) return false;
+    accessToken = data.access_token;
+    refreshToken = data.refresh_token;
+    localStorage.setItem('vocab_session', JSON.stringify({ accessToken, refreshToken }));
+    return true;
+  } catch(e) { return false; }
+}
+
+// Data API
+async function fetchWords() {
+  const data = await apiFetch('/rest/v1/words?select=*&order=created_at.desc');
+  return (data || []).map(w => ({
+    id: w.id, english: w.english, chinese: w.chinese, breakdown: w.breakdown || '',
+    status: w.status, correctStreak: w.correct_streak, totalCorrect: w.total_correct,
+    totalWrong: w.total_wrong, lastCorrectDate: w.last_correct_date,
+    lastAnswerCorrect: w.last_answer_correct, masteredAt: w.mastered_at, createdAt: w.created_at,
+  }));
+}
+
+async function saveWord(word) {
+  return apiFetch('/rest/v1/words', {
+    method: 'POST',
+    body: JSON.stringify({
+      id: word.id, user_id: word.user_id, english: word.english, chinese: word.chinese,
+      breakdown: word.breakdown || '', status: word.status, correct_streak: word.correctStreak,
+      total_correct: word.totalCorrect, total_wrong: word.totalWrong,
+      last_correct_date: word.lastCorrectDate, last_answer_correct: word.lastAnswerCorrect,
+      mastered_at: word.masteredAt,
+    }),
+    headers: { Prefer: 'resolution=merge-duplicates' },
+  });
+}
+
+async function updateWord(id, updates) {
+  const body = {};
+  if (updates.status !== undefined) body.status = updates.status;
+  if (updates.correctStreak !== undefined) body.correct_streak = updates.correctStreak;
+  if (updates.totalCorrect !== undefined) body.total_correct = updates.totalCorrect;
+  if (updates.totalWrong !== undefined) body.total_wrong = updates.totalWrong;
+  if (updates.lastCorrectDate !== undefined) body.last_correct_date = updates.lastCorrectDate;
+  if (updates.lastAnswerCorrect !== undefined) body.last_answer_correct = updates.lastAnswerCorrect;
+  if (updates.masteredAt !== undefined) body.mastered_at = updates.masteredAt;
+  return apiFetch('/rest/v1/words?id=eq.' + encodeURIComponent(id), {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+
+async function deleteWordRemote(id) {
+  return apiFetch('/rest/v1/words?id=eq.' + encodeURIComponent(id), { method: 'DELETE' });
+}
+
+async function fetchState() {
+  try {
+    const data = await apiFetch('/rest/v1/user_state?select=*&limit=1');
+    if (!data || data.length === 0) return null;
+    const s = data[0];
+    return {
+      checkInDates: s.check_in_dates || [], dailyReviewCount: s.daily_review_count || {},
+      todayMasteredCount: s.today_mastered_count || 0, todayStudiedCount: s.today_studied_count || 0,
+      quizSessionWordCount: s.quiz_session_word_count || 0, quizSessionWords: s.quiz_session_words || [],
+      lastQuizDate: s.last_quiz_date, lastPassageAt: s.last_passage_at || 0,
+    };
+  } catch(e) { return null; }
+}
+
+async function saveState(state) {
+  const user = await authGetUser();
+  if (!user) return;
+  return apiFetch('/rest/v1/user_state', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: user.id, check_in_dates: state.checkInDates, daily_review_count: state.dailyReviewCount,
+      today_mastered_count: state.todayMasteredCount, today_studied_count: state.todayStudiedCount,
+      quiz_session_word_count: state.quizSessionWordCount, quiz_session_words: state.quizSessionWords,
+      last_quiz_date: state.lastQuizDate, last_passage_at: state.lastPassageAt || 0,
+    }),
+    headers: { Prefer: 'resolution=merge-duplicates' },
+  });
+}
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
@@ -1100,127 +1256,10 @@ function pickRandom(arr, n) { return shuffle(arr).slice(0, n); }
 function el(id) { return document.getElementById(id); }
 function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-// ============================================================================
-// SUPABASE CLIENT
-// ============================================================================
-let supabase = null;
-function initSupabase() {
-  if (SUPABASE_URL.includes('YOUR_')) {
-    return false; // Not configured yet
-  }
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  return true;
-}
-
-// ============================================================================
-// CLOUD DATA LAYER — Supabase first, localStorage as offline cache
-// ============================================================================
-const CloudData = {
-  async fetchWords() {
-    const { data, error } = await supabase.from('words').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    // Map snake_case to camelCase for internal use
-    return (data || []).map(w => ({
-      id: w.id,
-      english: w.english,
-      chinese: w.chinese,
-      breakdown: w.breakdown || '',
-      status: w.status,
-      correctStreak: w.correct_streak,
-      totalCorrect: w.total_correct,
-      totalWrong: w.total_wrong,
-      lastCorrectDate: w.last_correct_date,
-      lastAnswerCorrect: w.last_answer_correct,
-      masteredAt: w.mastered_at,
-      createdAt: w.created_at,
-    }));
-  },
-
-  async saveWord(word) {
-    const row = {
-      id: word.id,
-      english: word.english,
-      chinese: word.chinese,
-      breakdown: word.breakdown || '',
-      status: word.status,
-      correct_streak: word.correctStreak,
-      total_correct: word.totalCorrect,
-      total_wrong: word.totalWrong,
-      last_correct_date: word.lastCorrectDate,
-      last_answer_correct: word.lastAnswerCorrect,
-      mastered_at: word.masteredAt,
-    };
-    const { error } = await supabase.from('words').upsert(row);
-    if (error) throw error;
-  },
-
-  async deleteWord(id) {
-    const { error } = await supabase.from('words').delete().eq('id', id);
-    if (error) throw error;
-  },
-
-  async addWord(english, chinese, breakdown) {
-    const word = {
-      id: uuid(),
-      english: english.trim(),
-      chinese: chinese.trim(),
-      breakdown: breakdown.trim(),
-      status: 'new',
-      correctStreak: 0,
-      totalCorrect: 0,
-      totalWrong: 0,
-      lastCorrectDate: null,
-      lastAnswerCorrect: false,
-      masteredAt: null,
-      createdAt: new Date().toISOString(),
-    };
-    await this.saveWord(word);
-    return word;
-  },
-
-  async fetchState() {
-    const { data, error } = await supabase.from('user_state').select('*').single();
-    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
-    if (!data) return null;
-    return {
-      checkInDates: data.check_in_dates || [],
-      dailyReviewCount: data.daily_review_count || {},
-      todayMasteredCount: data.today_mastered_count || 0,
-      todayStudiedCount: data.today_studied_count || 0,
-      quizSessionWordCount: data.quiz_session_word_count || 0,
-      quizSessionWords: data.quiz_session_words || [],
-      lastQuizDate: data.last_quiz_date,
-      lastPassageAt: data.last_passage_at || 0,
-    };
-  },
-
-  async saveState(state) {
-    const row = {
-      user_id: (await supabase.auth.getUser()).data.user.id,
-      check_in_dates: state.checkInDates,
-      daily_review_count: state.dailyReviewCount,
-      today_mastered_count: state.todayMasteredCount,
-      today_studied_count: state.todayStudiedCount,
-      quiz_session_word_count: state.quizSessionWordCount,
-      quiz_session_words: state.quizSessionWords,
-      last_quiz_date: state.lastQuizDate,
-      last_passage_at: state.lastPassageAt || 0,
-    };
-    const { error } = await supabase.from('user_state').upsert(row);
-    if (error) throw error;
-  },
-};
-
 // Local cache helpers
-function cacheWordsLocal(words) {
-  localStorage.setItem('vocab_words_cache', JSON.stringify(words));
-}
-function cacheStateLocal(state) {
-  localStorage.setItem('vocab_state_cache', JSON.stringify(state));
-}
-function getCachedWords() {
-  try { return JSON.parse(localStorage.getItem('vocab_words_cache')) || []; } catch(e) { return []; }
-}
+function cacheWordsLocal(words) { localStorage.setItem('vocab_words_cache', JSON.stringify(words)); }
+function cacheStateLocal(state) { localStorage.setItem('vocab_state_cache', JSON.stringify(state)); }
+function getCachedWords() { try { return JSON.parse(localStorage.getItem('vocab_words_cache')) || []; } catch(e) { return []; } }
 function getCachedState() {
   const defaults = { checkInDates:[], dailyReviewCount:{}, todayMasteredCount:0, todayStudiedCount:0, quizSessionWordCount:0, quizSessionWords:[], lastQuizDate:null, lastPassageAt:0 };
   try { return Object.assign(defaults, JSON.parse(localStorage.getItem('vocab_state_cache')) || {}); } catch(e) { return defaults; }
@@ -1231,21 +1270,31 @@ function getCachedState() {
 // ============================================================================
 const Auth = {
   async init() {
-    if (!supabase) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      await this.onLoggedIn(session.user);
-    } else {
-      this.showAuthScreen();
+    // Restore session from localStorage
+    const saved = localStorage.getItem('vocab_session');
+    if (saved) {
+      try {
+        const sess = JSON.parse(saved);
+        accessToken = sess.accessToken;
+        refreshToken = sess.refreshToken;
+        // Verify token is still valid
+        const user = await authGetUser();
+        if (user) {
+          await this.onLoggedIn(user);
+          return;
+        }
+        // Token expired, try refresh
+        const refreshed = await authRefresh();
+        if (refreshed) {
+          const user = await authGetUser();
+          if (user) { await this.onLoggedIn(user); return; }
+        }
+      } catch(e) {}
+      // Session invalid
+      accessToken = null; refreshToken = null;
+      localStorage.removeItem('vocab_session');
     }
-    // Listen for auth changes
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        this.onLoggedIn(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        this.showAuthScreen();
-      }
-    });
+    this.showAuthScreen();
   },
 
   showAuthScreen() {
@@ -1257,37 +1306,31 @@ const Auth = {
     el('auth-screen').classList.add('hidden');
     el('app-screen').classList.add('active');
     el('user-email-display').textContent = user.email;
-    // Load data from cloud
     try {
-      appData.words = await CloudData.fetchWords();
+      appData.words = await fetchWords();
       cacheWordsLocal(appData.words);
-      const cloudState = await CloudData.fetchState();
+      const cloudState = await fetchState();
       if (cloudState) {
         appData.state = cloudState;
       } else {
-        // Try local cache
         appData.state = getCachedState();
       }
-      // Reset daily counters if new day
       const today = todayStr();
       if (appData.state.lastQuizDate !== today) {
         appData.state.lastQuizDate = today;
-        appData.state.todayStudiedCount = 0;
-        appData.state.todayMasteredCount = 0;
-        appData.state.quizSessionWordCount = 0;
-        appData.state.quizSessionWords = [];
+        appData.state.todayStudiedCount = 0; appData.state.todayMasteredCount = 0;
+        appData.state.quizSessionWordCount = 0; appData.state.quizSessionWords = [];
         appData.state.lastPassageAt = 0;
       }
       if (!appData.state.dailyReviewCount) appData.state.dailyReviewCount = {};
       if (!appData.state.checkInDates) appData.state.checkInDates = [];
       cacheStateLocal(appData.state);
-      await CloudData.saveState(appData.state);
+      await saveState(appData.state);
     } catch(e) {
-      console.error('Failed to load cloud data, using cache:', e);
+      console.error('Load error:', e);
       appData.words = getCachedWords();
       appData.state = getCachedState();
     }
-    // Init UI
     initEvents();
     UI.updateStreakBadge();
     UI.renderStudy();
@@ -1295,23 +1338,25 @@ const Auth = {
   },
 
   async login(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
-    return { success: true };
+    try {
+      await authLogin(email, password);
+      const user = await authGetUser();
+      if (user) { await this.onLoggedIn(user); return { success: true }; }
+      return { error: '登录失败，请重试' };
+    } catch(e) { return { error: e.message }; }
   },
 
   async signup(email, password) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return { error: error.message };
-    // If email confirmation is off, user is signed in immediately
-    if (data.user && data.session) {
-      return { success: true, autoLogin: true };
-    }
-    return { success: true, autoLogin: false, message: '请检查邮箱并点击确认链接（如开启了邮箱验证）' };
+    try {
+      await authSignup(email, password);
+      const user = await authGetUser();
+      if (user) { await this.onLoggedIn(user); return { success: true, autoLogin: true }; }
+      return { success: true, autoLogin: false, message: '注册成功，请登录' };
+    } catch(e) { return { error: e.message }; }
   },
 
   async logout() {
-    await supabase.auth.signOut();
+    await authLogout();
     localStorage.removeItem('vocab_words_cache');
     localStorage.removeItem('vocab_state_cache');
     appData.words = [];
@@ -1325,55 +1370,34 @@ const Auth = {
 const DataManager = {
   async checkIn(state) {
     const today = todayStr();
-    if (!state.checkInDates.includes(today)) {
-      state.checkInDates.push(today);
-      state.checkInDates.sort();
-    }
+    if (!state.checkInDates.includes(today)) { state.checkInDates.push(today); state.checkInDates.sort(); }
     if (state.lastQuizDate !== today) {
-      state.todayStudiedCount = 0;
-      state.todayMasteredCount = 0;
-      state.quizSessionWordCount = 0;
-      state.quizSessionWords = [];
-      state.lastPassageAt = 0;
-      state.lastQuizDate = today;
+      state.todayStudiedCount = 0; state.todayMasteredCount = 0;
+      state.quizSessionWordCount = 0; state.quizSessionWords = []; state.lastPassageAt = 0; state.lastQuizDate = today;
     }
     await this.syncState(state);
   },
 
   async syncState(state) {
     cacheStateLocal(state);
-    if (supabase) {
-      try { await CloudData.saveState(state); } catch(e) { console.error('State sync error:', e); }
-    }
+    try { await saveState(state); } catch(e) {}
   },
 
   async addWord(english, chinese, breakdown) {
     const word = {
-      id: uuid(),
-      english: english.trim(),
-      chinese: chinese.trim(),
-      breakdown: breakdown.trim(),
-      status: 'new',
-      correctStreak: 0,
-      totalCorrect: 0,
-      totalWrong: 0,
-      lastCorrectDate: null,
-      lastAnswerCorrect: false,
-      masteredAt: null,
-      createdAt: new Date().toISOString(),
+      id: uuid(), user_id: null,
+      english: english.trim(), chinese: chinese.trim(), breakdown: breakdown.trim(),
+      status: 'new', correctStreak: 0, totalCorrect: 0, totalWrong: 0,
+      lastCorrectDate: null, lastAnswerCorrect: false, masteredAt: null, createdAt: new Date().toISOString(),
     };
-    if (supabase) {
-      await CloudData.saveWord(word);
-    }
+    try { await saveWord(word); } catch(e) { console.error(e); }
     appData.words.unshift(word);
     cacheWordsLocal(appData.words);
     return word;
   },
 
   async deleteWord(id) {
-    if (supabase) {
-      await CloudData.deleteWord(id);
-    }
+    try { await deleteWordRemote(id); } catch(e) {}
     appData.words = appData.words.filter(w => w.id !== id);
     cacheWordsLocal(appData.words);
   },
@@ -1382,36 +1406,23 @@ const DataManager = {
     const idx = appData.words.findIndex(w => w.id === id);
     if (idx === -1) return;
     Object.assign(appData.words[idx], updates);
-    if (supabase) {
-      await CloudData.saveWord(appData.words[idx]);
-    }
+    try { await updateWord(id, updates); } catch(e) {}
     cacheWordsLocal(appData.words);
   },
 
   getStreak(state) {
     if (!state.checkInDates.length) return 0;
     const dates = [...state.checkInDates].sort();
-    let streak = 0;
-    const today = todayStr();
-    let check = new Date(today);
-
+    let streak = 0, check = new Date(todayStr());
     for (let i = dates.length - 1; i >= 0; i--) {
-      const expected = check.getFullYear() + '-' + String(check.getMonth()+1).padStart(2,'0') + '-' + String(check.getDate()).padStart(2,'0');
-      if (dates[i] === expected) {
-        streak++;
-        check.setDate(check.getDate() - 1);
-      } else if (i === dates.length - 1 && dates[i] !== todayStr()) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yestStr = yesterday.getFullYear() + '-' + String(yesterday.getMonth()+1).padStart(2,'0') + '-' + String(yesterday.getDate()).padStart(2,'0');
-        if (dates[i] === yestStr) {
-          streak++;
-          check = new Date(yesterday);
-          check.setDate(check.getDate() - 1);
-          continue;
-        }
+      const expected = check.getFullYear()+'-'+String(check.getMonth()+1).padStart(2,'0')+'-'+String(check.getDate()).padStart(2,'0');
+      if (dates[i] === expected) { streak++; check.setDate(check.getDate()-1); }
+      else if (i === dates.length-1 && dates[i] !== todayStr()) {
+        const y = new Date(); y.setDate(y.getDate()-1);
+        const ys = y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0');
+        if (dates[i] === ys) { streak++; check = new Date(y); check.setDate(check.getDate()-1); continue; }
         break;
-      } else { break; }
+      } else break;
     }
     return streak;
   },
@@ -1424,24 +1435,12 @@ const DataManager = {
     try {
       const data = JSON.parse(jsonStr);
       if (!data.words || !Array.isArray(data.words)) throw new Error('格式错误');
-      // Merge into cloud
-      if (supabase) {
-        for (const w of data.words) {
-          await CloudData.saveWord(w);
-        }
-        appData.words = await CloudData.fetchWords();
-      } else {
-        appData.words = data.words;
-      }
-      if (data.state) {
-        appData.state = Object.assign(appData.state, data.state);
-        await this.syncState(appData.state);
-      }
+      for (const w of data.words) { try { await saveWord(w); } catch(e) {} }
+      appData.words = await fetchWords();
+      if (data.state) { appData.state = Object.assign(appData.state, data.state); await this.syncState(appData.state); }
       cacheWordsLocal(appData.words);
       return { success: true, count: data.words.length };
-    } catch(e) {
-      return { success: false, error: e.message };
-    }
+    } catch(e) { return { success: false, error: e.message }; }
   },
 };
 
@@ -2080,44 +2079,7 @@ function initEvents() {
 // INITIALIZATION
 // ============================================================================
 async function init() {
-  const configured = initSupabase();
-  if (!configured) {
-    // No Supabase config — show a notice and fall back to localStorage mode
-    el('auth-screen').classList.add('hidden');
-    el('app-screen').classList.add('active');
-    el('user-email-display').textContent = '离线模式';
-    // Load from local cache (or the old localStorage keys for migration)
-    const oldWords = localStorage.getItem('vocab_words');
-    const oldState = localStorage.getItem('vocab_state');
-    if (oldWords && !localStorage.getItem('vocab_words_cache')) {
-      localStorage.setItem('vocab_words_cache', oldWords);
-    }
-    if (oldState && !localStorage.getItem('vocab_state_cache')) {
-      localStorage.setItem('vocab_state_cache', oldState);
-    }
-    appData.words = getCachedWords();
-    appData.state = getCachedState();
-    // Reset daily if needed
-    const today = todayStr();
-    if (appData.state.lastQuizDate !== today) {
-      appData.state.lastQuizDate = today;
-      appData.state.todayStudiedCount = 0;
-      appData.state.todayMasteredCount = 0;
-      appData.state.quizSessionWordCount = 0;
-      appData.state.quizSessionWords = [];
-      appData.state.lastPassageAt = 0;
-    }
-    if (!appData.state.dailyReviewCount) appData.state.dailyReviewCount = {};
-    if (!appData.state.checkInDates) appData.state.checkInDates = [];
-    cacheStateLocal(appData.state);
-    initEvents();
-    UI.updateStreakBadge();
-    UI.renderStudy();
-    DataManager.checkIn(appData.state);
-  } else {
-    // Supabase configured — init auth
-    await Auth.init();
-  }
+  await Auth.init();
 }
 
 // Register Service Worker
