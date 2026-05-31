@@ -1,8 +1,7 @@
 // Set JS running indicator
-try { document.getElementById('js-status').textContent = '✅'; document.getElementById('js-status').style.color = 'green'; } catch(e) {}
+try { var s = document.getElementById('js-status'); if(s) { s.textContent = '●'; s.style.color = '#27AE60'; } } catch(e) {}
 window.onerror = function(msg, url, line) {
-  try { document.getElementById('js-status').textContent = '❌ Line '+line+': '+msg; document.getElementById('js-status').style.color = 'red'; } catch(e) {}
-  alert('JS Error line '+line+': '+msg);
+  try { var s = document.getElementById('js-status'); if(s) { s.textContent = '⚠'; s.style.color = 'red'; } } catch(e) {}
 };
 
 // ============================================================================
