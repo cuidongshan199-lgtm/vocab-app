@@ -976,7 +976,8 @@ input, textarea { width: 100%; }
 
   <div class="auth-notice">
     🔒 数据加密传输，仅你本人可访问<br>
-    📱 登录后全平台自动同步
+    📱 登录后全平台自动同步<br>
+    <span style="color:var(--primary);font-weight:700;">v3 — 2026-06-01</span>
   </div>
 </div>
 
@@ -1997,31 +1998,37 @@ function initEvents() {
   // Login form
   el('form-login').addEventListener('submit', async function(e) {
     e.preventDefault();
-    el('login-error').textContent = '';
-    el('btn-login').disabled = true;
-    el('btn-login').textContent = '登录中...';
+    const btn = el('btn-login');
+    btn.disabled = true; btn.textContent = '登录中...';
     const email = el('login-email').value.trim();
     const password = el('login-password').value;
-    if (!email || !password) { el('login-error').textContent = '请填写邮箱和密码'; el('btn-login').disabled=false; el('btn-login').textContent='登 录'; return; }
-    const result = await Auth.login(email, password);
-    if (result.error) { el('login-error').textContent = result.error; el('btn-login').disabled=false; el('btn-login').textContent='登 录'; }
-    // On success, Auth.onLoggedIn handles the rest
+    if (!email || !password) { alert('请填写邮箱和密码'); btn.disabled=false; btn.textContent='登 录'; return; }
+    try {
+      const result = await Auth.login(email, password);
+      if (result.error) { alert('登录失败：' + result.error); btn.disabled=false; btn.textContent='登 录'; }
+    } catch(err) {
+      alert('登录出错：' + err.message);
+      btn.disabled=false; btn.textContent='登 录';
+    }
   });
 
   // Signup form
   el('form-signup').addEventListener('submit', async function(e) {
     e.preventDefault();
-    el('signup-error').textContent = '';
-    el('btn-signup').disabled = true;
-    el('btn-signup').textContent = '注册中...';
+    const btn = el('btn-signup');
+    btn.disabled = true; btn.textContent = '注册中...';
     const email = el('signup-email').value.trim();
     const password = el('signup-password').value;
-    if (!email || !password) { el('signup-error').textContent = '请填写邮箱和密码'; el('btn-signup').disabled=false; el('btn-signup').textContent='注 册'; return; }
-    if (password.length < 6) { el('signup-error').textContent = '密码至少6位'; el('btn-signup').disabled=false; el('btn-signup').textContent='注 册'; return; }
-    const result = await Auth.signup(email, password);
-    if (result.error) { el('signup-error').textContent = result.error; el('btn-signup').disabled=false; el('btn-signup').textContent='注 册'; }
-    else if (result.autoLogin) { /* Auth.onLoggedIn handles */ }
-    else { el('signup-error').textContent = ''; alert('✅ 注册成功！'+(result.message||'请登录')); el('btn-signup').disabled=false; el('btn-signup').textContent='注 册'; }
+    if (!email || !password) { alert('请填写邮箱和密码'); btn.disabled=false; btn.textContent='注 册'; return; }
+    if (password.length < 6) { alert('密码至少6位'); btn.disabled=false; btn.textContent='注 册'; return; }
+    try {
+      const result = await Auth.signup(email, password);
+      if (result.error) { alert('注册失败：' + result.error); btn.disabled=false; btn.textContent='注 册'; }
+      // On success, Auth.onLoggedIn handles the transition
+    } catch(err) {
+      alert('注册出错：' + err.message);
+      btn.disabled=false; btn.textContent='注 册';
+    }
   });
 
   // Logout
