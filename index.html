@@ -960,19 +960,19 @@ input, textarea { width: 100%; }
     <button class="auth-tab" data-auth-tab="signup">注册</button>
   </div>
 
-  <form class="auth-form active" id="form-login" autocomplete="on">
-    <input type="email" class="auth-input" id="login-email" placeholder="邮箱地址" autocomplete="email" required>
-    <input type="password" class="auth-input" id="login-password" placeholder="密码" autocomplete="current-password" required>
-    <button type="submit" class="auth-btn" id="btn-login">登 录</button>
+  <div class="auth-form active" id="form-login">
+    <input type="email" class="auth-input" id="login-email" placeholder="邮箱地址" autocomplete="email">
+    <input type="password" class="auth-input" id="login-password" placeholder="密码" autocomplete="current-password">
+    <button type="button" class="auth-btn" id="btn-login" onclick="handleLogin()">登 录</button>
     <div class="auth-error" id="login-error"></div>
-  </form>
+  </div>
 
-  <form class="auth-form" id="form-signup" autocomplete="on">
-    <input type="email" class="auth-input" id="signup-email" placeholder="邮箱地址" autocomplete="email" required>
-    <input type="password" class="auth-input" id="signup-password" placeholder="设置密码（至少6位）" autocomplete="new-password" required minlength="6">
-    <button type="submit" class="auth-btn" id="btn-signup">注 册</button>
+  <div class="auth-form" id="form-signup">
+    <input type="email" class="auth-input" id="signup-email" placeholder="邮箱地址" autocomplete="email">
+    <input type="password" class="auth-input" id="signup-password" placeholder="设置密码（至少6位）" autocomplete="new-password" minlength="6">
+    <button type="button" class="auth-btn" id="btn-signup" onclick="handleSignup()">注 册</button>
     <div class="auth-error" id="signup-error"></div>
-  </form>
+  </div>
 
   <div class="auth-notice">
     🔒 数据加密传输，仅你本人可访问<br>
@@ -1257,7 +1257,37 @@ function pickRandom(arr, n) { return shuffle(arr).slice(0, n); }
 function el(id) { return document.getElementById(id); }
 function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-// Local cache helpers
+// Global auth handlers (called via onclick)
+async function handleLogin() {
+  const btn = el('btn-login');
+  btn.disabled = true; btn.textContent = '登录中...';
+  const email = el('login-email').value.trim();
+  const password = el('login-password').value;
+  if (!email || !password) { alert('请填写邮箱和密码'); btn.disabled=false; btn.textContent='登 录'; return; }
+  try {
+    await authLogin(email, password);
+    const user = await authGetUser();
+    if (user) { await Auth.onLoggedIn(user); return; }
+    alert('登录失败，请重试');
+  } catch(e) { alert('登录失败：' + e.message); }
+  btn.disabled = false; btn.textContent = '登 录';
+}
+
+async function handleSignup() {
+  const btn = el('btn-signup');
+  btn.disabled = true; btn.textContent = '注册中...';
+  const email = el('signup-email').value.trim();
+  const password = el('signup-password').value;
+  if (!email || !password) { alert('请填写邮箱和密码'); btn.disabled=false; btn.textContent='注 册'; return; }
+  if (password.length < 6) { alert('密码至少6位'); btn.disabled=false; btn.textContent='注 册'; return; }
+  try {
+    await authSignup(email, password);
+    const user = await authGetUser();
+    if (user) { await Auth.onLoggedIn(user); return; }
+    alert('注册成功！请登录');
+  } catch(e) { alert('注册失败：' + e.message); }
+  btn.disabled = false; btn.textContent = '注 册';
+}
 function cacheWordsLocal(words) { localStorage.setItem('vocab_words_cache', JSON.stringify(words)); }
 function cacheStateLocal(state) { localStorage.setItem('vocab_state_cache', JSON.stringify(state)); }
 function getCachedWords() { try { return JSON.parse(localStorage.getItem('vocab_words_cache')) || []; } catch(e) { return []; } }
@@ -1995,41 +2025,7 @@ function initEvents() {
     });
   });
 
-  // Login form
-  el('form-login').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const btn = el('btn-login');
-    btn.disabled = true; btn.textContent = '登录中...';
-    const email = el('login-email').value.trim();
-    const password = el('login-password').value;
-    if (!email || !password) { alert('请填写邮箱和密码'); btn.disabled=false; btn.textContent='登 录'; return; }
-    try {
-      const result = await Auth.login(email, password);
-      if (result.error) { alert('登录失败：' + result.error); btn.disabled=false; btn.textContent='登 录'; }
-    } catch(err) {
-      alert('登录出错：' + err.message);
-      btn.disabled=false; btn.textContent='登 录';
-    }
-  });
-
-  // Signup form
-  el('form-signup').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const btn = el('btn-signup');
-    btn.disabled = true; btn.textContent = '注册中...';
-    const email = el('signup-email').value.trim();
-    const password = el('signup-password').value;
-    if (!email || !password) { alert('请填写邮箱和密码'); btn.disabled=false; btn.textContent='注 册'; return; }
-    if (password.length < 6) { alert('密码至少6位'); btn.disabled=false; btn.textContent='注 册'; return; }
-    try {
-      const result = await Auth.signup(email, password);
-      if (result.error) { alert('注册失败：' + result.error); btn.disabled=false; btn.textContent='注 册'; }
-      // On success, Auth.onLoggedIn handles the transition
-    } catch(err) {
-      alert('注册出错：' + err.message);
-      btn.disabled=false; btn.textContent='注 册';
-    }
-  });
+  // Auth events handled via onclick in HTML
 
   // Logout
   el('btn-logout').addEventListener('click', async () => { if (confirm('确定退出登录？')) await Auth.logout(); });
