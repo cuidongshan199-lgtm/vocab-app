@@ -953,7 +953,7 @@ input, textarea { width: 100%; }
 <div id="auth-screen">
   <div class="auth-logo">📖</div>
   <div class="auth-title">Vocabulary</div>
-  <div class="auth-subtitle">你的智能英语背单词助手</div>
+  <div class="auth-subtitle">你的智能英语背单词助手 <span id="js-status" style="color:red;">⏳</span></div>
 
   <div class="auth-tabs">
     <button class="auth-tab active" data-auth-tab="login">登录</button>
@@ -1070,6 +1070,13 @@ input, textarea { width: 100%; }
 </div>
 
 <script>
+// Set JS running indicator
+try { document.getElementById('js-status').textContent = '✅'; document.getElementById('js-status').style.color = 'green'; } catch(e) {}
+window.onerror = function(msg, url, line) {
+  try { document.getElementById('js-status').textContent = '❌ Line '+line+': '+msg; document.getElementById('js-status').style.color = 'red'; } catch(e) {}
+  alert('JS Error line '+line+': '+msg);
+};
+
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
