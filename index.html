@@ -1,0 +1,2133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#3B7DD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="背单词">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📖</text></svg>">
+<title>Vocabulary — 英语背单词</title>
+<style>
+/* ===== CSS Variables ===== */
+:root {
+  --primary: #3B7DD8;
+  --primary-dark: #2E6BC0;
+  --primary-light: #EEF4FC;
+  --primary-soft: #F5F8FD;
+  --success: #27AE60;
+  --success-light: #EDF9F2;
+  --danger: #E74C3C;
+  --danger-light: #FEF3F1;
+  --warning: #F59E0B;
+  --warning-light: #FFFCF0;
+  --bg: #FFFFFF;
+  --bg-subtle: #F9FAFB;
+  --text: #1A1D26;
+  --text-secondary: #8B919E;
+  --text-tertiary: #B0B8C5;
+  --border: #E8ECF1;
+  --border-light: #F2F4F7;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow: 0 2px 16px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+  --radius-xs: 10px;
+  --radius-sm: 14px;
+  --radius: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --tab-height: 72px;
+  --header-height: 56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font);
+  font-size: 17px;
+  color: var(--text);
+  background: var(--bg-subtle);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+button, input, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  border: none;
+  outline: none;
+  background: none;
+}
+button { cursor: pointer; user-select: none; -webkit-user-select: none; }
+input, textarea { width: 100%; }
+
+/* ===== Auth Screen ===== */
+#auth-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 32px 24px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+#auth-screen.hidden { display: none; }
+
+.auth-logo {
+  font-size: 64px;
+  margin-bottom: 12px;
+}
+.auth-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+.auth-subtitle {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+
+.auth-tabs {
+  display: flex;
+  width: 100%;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-xs);
+  padding: 4px;
+  margin-bottom: 24px;
+}
+.auth-tab {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+.auth-tab.active {
+  background: var(--bg);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.auth-form { width: 100%; display: none; }
+.auth-form.active { display: block; }
+
+.auth-input {
+  width: 100%;
+  padding: 14px 18px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 17px;
+  margin-bottom: 12px;
+  min-height: 52px;
+  background: var(--bg-subtle);
+  transition: all 0.2s;
+}
+.auth-input:focus {
+  border-color: var(--primary);
+  background: var(--bg);
+  box-shadow: 0 0 0 4px rgba(59,125,216,0.08);
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-xs);
+  font-weight: 700;
+  font-size: 17px;
+  min-height: 52px;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 14px rgba(59,125,216,0.3);
+}
+.auth-btn:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,125,216,0.4); }
+.auth-btn:active { transform: scale(0.97); }
+.auth-btn:disabled { opacity: 0.5; pointer-events: none; }
+
+.auth-error {
+  color: var(--danger);
+  font-size: 14px;
+  text-align: center;
+  margin-top: 12px;
+  min-height: 20px;
+}
+
+.auth-notice {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin-top: 20px;
+  line-height: 1.6;
+}
+
+/* ===== App Shell ===== */
+#app-screen { display: none; flex-direction: column; height: 100%; }
+#app-screen.active { display: flex; }
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 840px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+}
+
+@media (min-width: 840px) {
+  #app {
+    border-left: 1px solid var(--border-light);
+    border-right: 1px solid var(--border-light);
+  }
+}
+
+/* ===== Header ===== */
+#header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-light);
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+#header .logo { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
+#header .streak-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #D97706;
+  background: var(--warning-light);
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid #FDE68A;
+}
+
+#header .header-right { display: flex; align-items: center; gap: 4px; }
+#header .btn-icon {
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 18px;
+  transition: background 0.2s;
+  color: var(--text-secondary);
+}
+#header .btn-icon:hover { background: var(--bg-subtle); color: var(--text); }
+
+#header .user-email {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+/* ===== Main Content ===== */
+#main-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 20px;
+  padding-bottom: calc(var(--tab-height) + var(--safe-bottom) + 24px);
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.panel { display: none; }
+.panel.active { display: block; animation: fadeIn 0.2s ease; }
+
+/* ===== Bottom Tab Bar ===== */
+#tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 840px;
+  height: calc(var(--tab-height) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  z-index: 100;
+}
+
+#tab-bar .tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--text-tertiary);
+  transition: all 0.2s;
+  font-size: 12px;
+  font-weight: 600;
+  min-height: 44px;
+  position: relative;
+}
+
+#tab-bar .tab .tab-icon { font-size: 24px; transition: transform 0.2s; }
+#tab-bar .tab.active { color: var(--primary); }
+#tab-bar .tab.active .tab-icon { transform: scale(1.1); }
+#tab-bar .tab.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 0 0 3px 3px;
+}
+
+/* ===== Study Panel ===== */
+.review-count {
+  text-align: center;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  background: var(--primary-soft);
+  border-radius: var(--radius);
+  color: var(--primary-dark);
+  font-weight: 700;
+  font-size: 16px;
+  border: 1px solid var(--primary-light);
+}
+
+.no-review {
+  text-align: center;
+  padding: 80px 24px;
+  color: var(--text-secondary);
+}
+.no-review .emoji { font-size: 72px; margin-bottom: 20px; }
+.no-review .msg { font-size: 17px; line-height: 1.7; }
+
+/* Quiz Card */
+.quiz-card {
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 28px 24px;
+  transition: all 0.3s;
+  border: 1px solid var(--border-light);
+}
+
+.quiz-card.correct { animation: flashGreen 0.5s ease; }
+.quiz-card.wrong { animation: shake 0.5s ease, flashRed 0.5s ease; }
+
+.quiz-type-label {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  margin-bottom: 12px;
+  background: var(--bg-subtle);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.quiz-prompt {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 24px;
+  color: var(--text);
+  line-height: 1.45;
+  word-break: break-word;
+  letter-spacing: -0.2px;
+}
+
+.quiz-prompt .word-display {
+  font-size: 34px;
+  color: var(--primary);
+  letter-spacing: 1px;
+  font-weight: 900;
+}
+
+.options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.option-btn {
+  padding: 18px 20px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.18s ease;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  word-break: break-word;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.option-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.option-btn:active { transform: scale(0.97); }
+.option-btn.selected-correct { border-color: var(--success); background: var(--success-light); color: var(--success); font-weight: 700; }
+.option-btn.selected-wrong { border-color: var(--danger); background: var(--danger-light); color: var(--danger); }
+.option-btn.reveal-correct { border-color: var(--success); background: var(--success-light); color: var(--success); font-weight: 700; }
+
+.quiz-input-row { display: flex; gap: 12px; }
+.quiz-input {
+  flex: 1;
+  padding: 16px 20px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 20px;
+  font-weight: 600;
+  transition: all 0.2s;
+  min-height: 56px;
+  background: var(--bg-subtle);
+  letter-spacing: 1px;
+}
+.quiz-input:focus { border-color: var(--primary); background: var(--bg); box-shadow: 0 0 0 4px rgba(59,125,216,0.1); }
+.quiz-input.correct { border-color: var(--success); background: var(--success-light); }
+.quiz-input.wrong { border-color: var(--danger); background: var(--danger-light); }
+
+.submit-btn {
+  padding: 16px 28px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 17px;
+  min-height: 56px;
+  min-width: 90px;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+.submit-btn:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow); }
+.submit-btn:active { transform: scale(0.97); }
+
+.listen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 28px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-radius: var(--radius);
+  font-size: 19px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  width: 100%;
+  min-height: 60px;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+.listen-btn:hover { background: var(--primary-light); border-color: var(--primary); }
+.listen-btn:active { transform: scale(0.97); }
+.listen-btn .speaker-icon { font-size: 26px; }
+
+.missing-letters {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  text-align: center;
+  padding: 20px;
+  color: var(--primary);
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  background: var(--primary-soft);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+}
+
+.drag-word {
+  display: inline-block;
+  padding: 14px 32px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 28px;
+  font-size: 20px;
+  font-weight: 800;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  margin: 0 auto 20px;
+  transition: all 0.2s;
+  touch-action: none;
+  box-shadow: 0 4px 16px rgba(59,125,216,0.3);
+  letter-spacing: 0.5px;
+}
+.drag-word:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(59,125,216,0.4); }
+.drag-word:active { cursor: grabbing; }
+.drag-word.dragging { opacity: 0.6; }
+.drag-word.selected {
+  box-shadow: 0 0 0 5px rgba(59,125,216,0.25);
+  animation: bounce 0.4s ease;
+}
+
+.drop-zones { display: flex; flex-direction: column; gap: 14px; }
+.drop-zone {
+  padding: 18px 20px;
+  border: 2.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  min-height: 52px;
+  text-align: center;
+  transition: all 0.2s;
+  font-size: 17px;
+  line-height: 1.6;
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+.drop-zone.drag-over { border-color: var(--primary); background: var(--primary-soft); border-style: solid; }
+.drop-zone .blank {
+  display: inline-block;
+  min-width: 70px;
+  border-bottom: 3px solid var(--primary);
+  margin: 0 6px;
+  vertical-align: bottom;
+}
+
+.feedback-toast {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 28px;
+  border-radius: 28px;
+  font-weight: 800;
+  font-size: 18px;
+  z-index: 200;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 1s forwards;
+  pointer-events: none;
+  box-shadow: var(--shadow-lg);
+  letter-spacing: 0.3px;
+}
+.feedback-toast.correct { background: var(--success); color: #fff; }
+.feedback-toast.wrong { background: var(--danger); color: #fff; }
+
+.answer-reveal {
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+.answer-reveal strong { color: var(--primary); font-weight: 700; }
+
+/* ===== Word Bank ===== */
+.wordbank-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  background: var(--bg-subtle);
+  padding: 5px;
+  border-radius: var(--radius-sm);
+}
+.wordbank-tab {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: var(--radius-xs);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  transition: all 0.2s;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+.wordbank-tab.active { background: var(--bg); color: var(--primary); box-shadow: var(--shadow-sm); }
+
+.search-add-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.search-input {
+  flex: 1;
+  padding: 12px 18px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 16px;
+  min-height: 48px;
+  transition: all 0.2s;
+  background: var(--bg-subtle);
+}
+.search-input:focus { border-color: var(--primary); background: var(--bg); box-shadow: 0 0 0 4px rgba(59,125,216,0.08); }
+
+.add-word-btn {
+  padding: 12px 22px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-xs);
+  font-weight: 700;
+  font-size: 15px;
+  min-height: 48px;
+  white-space: nowrap;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+.add-word-btn:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow); }
+
+.word-list { display: flex; flex-direction: column; gap: 10px; }
+.empty-state { text-align: center; padding: 48px 24px; color: var(--text-secondary); font-size: 16px; }
+
+.word-card {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+.word-card:hover { box-shadow: var(--shadow); }
+.word-card:active { transform: scale(0.99); }
+
+.word-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.word-card-main { flex: 1; min-width: 0; cursor: pointer; }
+.word-card-english { font-size: 19px; font-weight: 800; color: var(--text); letter-spacing: -0.2px; }
+.word-card-chinese { font-size: 15px; color: var(--text-secondary); margin-top: 4px; }
+.word-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.card-action-btn {
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 18px;
+  transition: all 0.2s;
+  min-height: 42px;
+  color: var(--text-secondary);
+}
+.card-action-btn:hover { background: var(--bg-subtle); color: var(--text); }
+.card-action-btn.delete:hover { background: var(--danger-light); color: var(--danger); }
+
+.progress-bar-wrap {
+  height: 5px;
+  background: var(--border-light);
+  border-radius: 3px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #63ADF2);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.progress-bar-fill.mastered { background: linear-gradient(90deg, var(--success), #4CD964); }
+
+.word-detail {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+  display: none;
+}
+.word-card.expanded .word-detail { display: block; animation: fadeIn 0.25s ease; }
+.word-detail-row { margin-bottom: 12px; font-size: 15px; line-height: 1.65; }
+.word-detail-label { font-size: 12px; color: var(--text-tertiary); font-weight: 700; letter-spacing: 0.8px; margin-bottom: 4px; }
+.detail-listen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-radius: 22px;
+  font-weight: 700;
+  font-size: 15px;
+  margin: 10px 0 4px;
+  min-height: 44px;
+  transition: all 0.2s;
+}
+.detail-listen-btn:hover { background: var(--primary-light); }
+.example-sentences { margin-top: 12px; }
+.example-sentence {
+  padding: 12px 16px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-xs);
+  margin-bottom: 8px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+  border-left: 3px solid var(--primary-light);
+}
+.example-sentence .highlight { color: var(--primary); font-weight: 800; }
+
+/* ===== Stats ===== */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 22px 18px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.stat-card-value { font-size: 42px; font-weight: 900; color: var(--text); letter-spacing: -1px; line-height: 1; }
+.stat-card:nth-child(1) .stat-card-value { color: var(--success); }
+.stat-card:nth-child(2) .stat-card-value { color: var(--primary); }
+.stat-card:nth-child(3) .stat-card-value { color: var(--warning); }
+.stat-card:nth-child(4) .stat-card-value { color: #8B5CF6; }
+.stat-card-label { font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-top: 8px; }
+
+.chart-section {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-sm);
+}
+.chart-title { font-size: 16px; font-weight: 800; margin-bottom: 16px; color: var(--text); }
+.chart-container { display: flex; align-items: flex-end; gap: 10px; height: 130px; padding-top: 8px; }
+.chart-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+}
+.chart-bar {
+  width: 100%;
+  max-width: 44px;
+  background: linear-gradient(180deg, var(--primary), #63ADF2);
+  border-radius: 6px 6px 0 0;
+  min-height: 4px;
+  transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.chart-bar-label { font-size: 12px; font-weight: 600; color: var(--text-tertiary); margin-top: 8px; }
+.chart-bar-value { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; }
+
+.stats-list {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-sm);
+}
+.stats-list-title { font-size: 16px; font-weight: 800; margin-bottom: 14px; color: var(--text); }
+.stats-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 15px;
+}
+.stats-list-item:last-child { border-bottom: none; }
+.stats-list-item .word-en { font-weight: 700; font-size: 16px; }
+.stats-list-item .word-cn { color: var(--text-secondary); font-size: 14px; margin-left: 4px; }
+.stats-list-item .word-pct { color: var(--danger); font-weight: 800; font-size: 15px; }
+
+/* ===== Modals ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,15,25,0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+.modal-sheet {
+  background: var(--bg);
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 840px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 28px 24px;
+  padding-bottom: calc(28px + var(--safe-bottom));
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-title { font-size: 22px; font-weight: 800; margin-bottom: 24px; text-align: center; letter-spacing: -0.3px; }
+.form-group { margin-bottom: 20px; }
+.form-label { display: block; font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; letter-spacing: 0.3px; }
+.form-input {
+  padding: 14px 18px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 17px;
+  font-weight: 500;
+  transition: all 0.2s;
+  min-height: 52px;
+  background: var(--bg-subtle);
+}
+.form-input:focus { border-color: var(--primary); background: var(--bg); box-shadow: 0 0 0 4px rgba(59,125,216,0.08); }
+.form-textarea {
+  padding: 14px 18px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 17px;
+  font-weight: 500;
+  min-height: 90px;
+  resize: vertical;
+  transition: all 0.2s;
+  background: var(--bg-subtle);
+}
+.form-textarea:focus { border-color: var(--primary); background: var(--bg); box-shadow: 0 0 0 4px rgba(59,125,216,0.08); }
+.modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+.btn {
+  flex: 1;
+  padding: 16px 24px;
+  border-radius: var(--radius-xs);
+  font-weight: 700;
+  font-size: 17px;
+  text-align: center;
+  min-height: 52px;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+.btn-primary { background: var(--primary); color: #fff; box-shadow: 0 4px 14px rgba(59,125,216,0.3); }
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,125,216,0.4); }
+.btn-secondary { background: var(--bg-subtle); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border-light); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #C0392B; transform: translateY(-1px); }
+.btn:active { transform: scale(0.97); }
+
+/* ===== Passage ===== */
+.passage-card {
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 28px 24px;
+  margin-top: 20px;
+  border: 1px solid var(--border-light);
+}
+.passage-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; color: var(--primary); text-align: center; letter-spacing: -0.3px; }
+.passage-text { font-size: 16px; line-height: 1.9; margin-bottom: 24px; color: var(--text); }
+.passage-text .pw { color: var(--primary); font-weight: 800; }
+.passage-question { font-weight: 800; margin-bottom: 12px; font-size: 16px; color: var(--text); }
+.passage-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.passage-option {
+  padding: 14px 18px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 16px;
+  text-align: left;
+  min-height: 48px;
+  transition: all 0.2s;
+  font-weight: 500;
+  background: var(--bg);
+}
+.passage-option:hover { border-color: var(--primary); background: var(--primary-soft); }
+.passage-option.chosen-correct { border-color: var(--success); background: var(--success-light); font-weight: 700; }
+.passage-option.chosen-wrong { border-color: var(--danger); background: var(--danger-light); }
+
+.import-export-row { display: flex; gap: 12px; margin-top: 12px; }
+
+/* Session summary */
+.session-summary { text-align: center; padding: 32px 20px; }
+.session-summary .big-emoji { font-size: 80px; margin-bottom: 16px; }
+.session-summary .summary-text { font-size: 18px; line-height: 1.8; color: var(--text); font-weight: 500; }
+.session-summary .summary-stats { display: flex; gap: 16px; justify-content: center; margin-top: 20px; }
+.session-summary .ss-stat {
+  padding: 16px 24px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius);
+  text-align: center;
+  border: 1px solid var(--border-light);
+}
+.session-summary .ss-stat-val { font-size: 32px; font-weight: 900; color: var(--primary); letter-spacing: -1px; }
+.session-summary .ss-stat-lbl { font-size: 14px; color: var(--text-secondary); font-weight: 600; margin-top: 4px; }
+
+/* Loading spinner */
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.syncing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  justify-content: center;
+  padding: 4px;
+}
+.syncing-indicator .dot {
+  width: 6px; height: 6px;
+  background: var(--success);
+  border-radius: 50%;
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.06); }
+  60% { transform: scale(0.97); }
+  80% { transform: scale(1.02); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 50%, 90% { transform: translateX(-5px); }
+  30%, 70% { transform: translateX(5px); }
+}
+@keyframes flashGreen {
+  0% { background-color: var(--bg); border-color: var(--border-light); }
+  25% { background-color: #EDF9F2; border-color: var(--success); }
+  100% { background-color: var(--bg); border-color: var(--border-light); }
+}
+@keyframes flashRed {
+  0% { background-color: var(--bg); border-color: var(--border-light); }
+  25% { background-color: #FEF3F1; border-color: var(--danger); }
+  100% { background-color: var(--bg); border-color: var(--border-light); }
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(0.9); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
+@keyframes toastOut { from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } to { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(0.9); } }
+@keyframes popIn {
+  0% { transform: scale(0.85); opacity: 0; }
+  70% { transform: scale(1.03); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-bounce { animation: bounce 0.5s ease; }
+.animate-pop { animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* ===== Responsive ===== */
+@media (min-width: 600px) {
+  .quiz-prompt { font-size: 26px; }
+  .quiz-prompt .word-display { font-size: 38px; }
+  .options-grid { gap: 16px; }
+  .option-btn { font-size: 19px; padding: 20px 24px; }
+  .stats-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 768px) {
+  #main-content { padding: 28px 28px; padding-bottom: calc(var(--tab-height) + var(--safe-bottom) + 28px); }
+  .modal-sheet { border-radius: 24px; margin: auto; max-height: 75vh; width: 480px; }
+  .modal-overlay { align-items: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Auth Screen ===== -->
+<div id="auth-screen">
+  <div class="auth-logo">📖</div>
+  <div class="auth-title">Vocabulary</div>
+  <div class="auth-subtitle">你的智能英语背单词助手</div>
+
+  <div class="auth-tabs">
+    <button class="auth-tab active" data-auth-tab="login">登录</button>
+    <button class="auth-tab" data-auth-tab="signup">注册</button>
+  </div>
+
+  <form class="auth-form active" id="form-login" autocomplete="on">
+    <input type="email" class="auth-input" id="login-email" placeholder="邮箱地址" autocomplete="email" required>
+    <input type="password" class="auth-input" id="login-password" placeholder="密码" autocomplete="current-password" required>
+    <button type="submit" class="auth-btn" id="btn-login">登 录</button>
+    <div class="auth-error" id="login-error"></div>
+  </form>
+
+  <form class="auth-form" id="form-signup" autocomplete="on">
+    <input type="email" class="auth-input" id="signup-email" placeholder="邮箱地址" autocomplete="email" required>
+    <input type="password" class="auth-input" id="signup-password" placeholder="设置密码（至少6位）" autocomplete="new-password" required minlength="6">
+    <button type="submit" class="auth-btn" id="btn-signup">注 册</button>
+    <div class="auth-error" id="signup-error"></div>
+  </form>
+
+  <div class="auth-notice">
+    🔒 数据加密传输，仅你本人可访问<br>
+    📱 登录后全平台自动同步
+  </div>
+</div>
+
+<!-- ===== App Screen ===== -->
+<div id="app-screen">
+  <div id="app">
+    <div id="header">
+      <span class="logo">Vocabulary</span>
+      <span class="streak-badge" id="streak-badge">🔥 0天</span>
+      <div class="header-right">
+        <span class="user-email" id="user-email-display"></span>
+        <button class="btn-icon" id="btn-export" title="导入/导出">📦</button>
+        <button class="btn-icon" id="btn-logout" title="退出登录">🚪</button>
+      </div>
+    </div>
+
+    <div id="main-content">
+      <!-- Study Panel -->
+      <div class="panel active" id="panel-study">
+        <div class="review-count" id="review-count">📋 今日待复习：计算中...</div>
+        <div id="quiz-container"></div>
+        <div id="passage-container"></div>
+        <div id="session-end-container"></div>
+      </div>
+
+      <!-- Word Bank Panel -->
+      <div class="panel" id="panel-wordbank">
+        <div class="wordbank-tabs">
+          <button class="wordbank-tab active" data-bank="new" id="wb-tab-new">🌱 生词库</button>
+          <button class="wordbank-tab" data-bank="mastered" id="wb-tab-mastered">✅ 熟词库</button>
+        </div>
+        <div class="search-add-row">
+          <input type="text" class="search-input" id="search-input" placeholder="🔍 搜索单词...">
+          <button class="add-word-btn" id="btn-add-word">+ 添加</button>
+        </div>
+        <div class="word-list" id="word-list"></div>
+      </div>
+
+      <!-- Stats Panel -->
+      <div class="panel" id="panel-stats">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-card-value" id="stat-mastered">0</div><div class="stat-card-label">✅ 熟词库</div></div>
+          <div class="stat-card"><div class="stat-card-value" id="stat-new">0</div><div class="stat-card-label">🌱 生词库</div></div>
+          <div class="stat-card"><div class="stat-card-value" id="stat-today-studied">0</div><div class="stat-card-label">📝 今日学习</div></div>
+          <div class="stat-card"><div class="stat-card-value" id="stat-today-mastered">0</div><div class="stat-card-label">🎯 今日掌握</div></div>
+        </div>
+        <div class="chart-section">
+          <div class="chart-title">📊 最近7天学习量</div>
+          <div class="chart-container" id="weekly-chart"></div>
+        </div>
+        <div class="stats-list"><div class="stats-list-title">🏆 最近掌握</div><div id="recent-mastered-list"></div></div>
+        <div class="stats-list"><div class="stats-list-title">⚠️ 重点复习</div><div id="weakest-list"></div></div>
+      </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div id="tab-bar">
+      <button class="tab active" data-panel="panel-study"><span class="tab-icon">📖</span><span>学习</span></button>
+      <button class="tab" data-panel="panel-wordbank"><span class="tab-icon">📚</span><span>词库</span></button>
+      <button class="tab" data-panel="panel-stats"><span class="tab-icon">📊</span><span>统计</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modals ===== -->
+<div class="modal-overlay" id="modal-add-word" style="display:none;">
+  <div class="modal-sheet">
+    <div class="modal-title">✏️ 添加单词</div>
+    <div class="form-group"><label class="form-label">英文</label><input type="text" class="form-input" id="add-english" placeholder="例如：unhappy" autocomplete="off"></div>
+    <div class="form-group"><label class="form-label">中文释义</label><input type="text" class="form-input" id="add-chinese" placeholder="例如：不开心的" autocomplete="off"></div>
+    <div class="form-group"><label class="form-label">词根词缀拆解（选填）</label><textarea class="form-textarea" id="add-breakdown" placeholder="例如：un否定 + happy快乐 → 不快乐的"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btn-add-cancel">取消</button>
+      <button class="btn btn-primary" id="btn-add-confirm">✅ 添加到生词库</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-io" style="display:none;">
+  <div class="modal-sheet">
+    <div class="modal-title">📦 导入 / 导出</div>
+    <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;text-align:center;">数据已自动云端同步。<br>导出 JSON 可离线备份，或迁移到其他账号。</p>
+    <div class="import-export-row">
+      <button class="btn btn-primary" id="btn-do-export">📤 导出 JSON</button>
+      <button class="btn btn-secondary" id="btn-do-import">📥 导入 JSON</button>
+    </div>
+    <input type="file" id="import-file-input" accept=".json" style="display:none;">
+    <div class="modal-actions"><button class="btn btn-secondary" id="btn-io-close">关闭</button></div>
+  </div>
+</div>
+
+<!-- ===== Supabase SDK ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<script>
+// ============================================================================
+// CONFIGURATION — 部署时替换为你的 Supabase 信息
+// ============================================================================
+const SUPABASE_URL = 'https://edibgrvefqfohlqsdfxs.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_kumBhObEHh7jpIbN6jnkjQ_JL7ZG2c1';
+
+// ============================================================================
+// UTILITIES
+// ============================================================================
+function uuid() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function dateDiffDays(d1, d2) {
+  return Math.floor((new Date(d2).getTime() - new Date(d1).getTime()) / 86400000);
+}
+function shuffle(arr) { const a = arr.slice(); for (let i = a.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function pickRandom(arr, n) { return shuffle(arr).slice(0, n); }
+function el(id) { return document.getElementById(id); }
+function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// ============================================================================
+// SUPABASE CLIENT
+// ============================================================================
+let supabase = null;
+function initSupabase() {
+  if (SUPABASE_URL.includes('YOUR_')) {
+    return false; // Not configured yet
+  }
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  return true;
+}
+
+// ============================================================================
+// CLOUD DATA LAYER — Supabase first, localStorage as offline cache
+// ============================================================================
+const CloudData = {
+  async fetchWords() {
+    const { data, error } = await supabase.from('words').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    // Map snake_case to camelCase for internal use
+    return (data || []).map(w => ({
+      id: w.id,
+      english: w.english,
+      chinese: w.chinese,
+      breakdown: w.breakdown || '',
+      status: w.status,
+      correctStreak: w.correct_streak,
+      totalCorrect: w.total_correct,
+      totalWrong: w.total_wrong,
+      lastCorrectDate: w.last_correct_date,
+      lastAnswerCorrect: w.last_answer_correct,
+      masteredAt: w.mastered_at,
+      createdAt: w.created_at,
+    }));
+  },
+
+  async saveWord(word) {
+    const row = {
+      id: word.id,
+      english: word.english,
+      chinese: word.chinese,
+      breakdown: word.breakdown || '',
+      status: word.status,
+      correct_streak: word.correctStreak,
+      total_correct: word.totalCorrect,
+      total_wrong: word.totalWrong,
+      last_correct_date: word.lastCorrectDate,
+      last_answer_correct: word.lastAnswerCorrect,
+      mastered_at: word.masteredAt,
+    };
+    const { error } = await supabase.from('words').upsert(row);
+    if (error) throw error;
+  },
+
+  async deleteWord(id) {
+    const { error } = await supabase.from('words').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async addWord(english, chinese, breakdown) {
+    const word = {
+      id: uuid(),
+      english: english.trim(),
+      chinese: chinese.trim(),
+      breakdown: breakdown.trim(),
+      status: 'new',
+      correctStreak: 0,
+      totalCorrect: 0,
+      totalWrong: 0,
+      lastCorrectDate: null,
+      lastAnswerCorrect: false,
+      masteredAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    await this.saveWord(word);
+    return word;
+  },
+
+  async fetchState() {
+    const { data, error } = await supabase.from('user_state').select('*').single();
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+    if (!data) return null;
+    return {
+      checkInDates: data.check_in_dates || [],
+      dailyReviewCount: data.daily_review_count || {},
+      todayMasteredCount: data.today_mastered_count || 0,
+      todayStudiedCount: data.today_studied_count || 0,
+      quizSessionWordCount: data.quiz_session_word_count || 0,
+      quizSessionWords: data.quiz_session_words || [],
+      lastQuizDate: data.last_quiz_date,
+      lastPassageAt: data.last_passage_at || 0,
+    };
+  },
+
+  async saveState(state) {
+    const row = {
+      user_id: (await supabase.auth.getUser()).data.user.id,
+      check_in_dates: state.checkInDates,
+      daily_review_count: state.dailyReviewCount,
+      today_mastered_count: state.todayMasteredCount,
+      today_studied_count: state.todayStudiedCount,
+      quiz_session_word_count: state.quizSessionWordCount,
+      quiz_session_words: state.quizSessionWords,
+      last_quiz_date: state.lastQuizDate,
+      last_passage_at: state.lastPassageAt || 0,
+    };
+    const { error } = await supabase.from('user_state').upsert(row);
+    if (error) throw error;
+  },
+};
+
+// Local cache helpers
+function cacheWordsLocal(words) {
+  localStorage.setItem('vocab_words_cache', JSON.stringify(words));
+}
+function cacheStateLocal(state) {
+  localStorage.setItem('vocab_state_cache', JSON.stringify(state));
+}
+function getCachedWords() {
+  try { return JSON.parse(localStorage.getItem('vocab_words_cache')) || []; } catch(e) { return []; }
+}
+function getCachedState() {
+  const defaults = { checkInDates:[], dailyReviewCount:{}, todayMasteredCount:0, todayStudiedCount:0, quizSessionWordCount:0, quizSessionWords:[], lastQuizDate:null, lastPassageAt:0 };
+  try { return Object.assign(defaults, JSON.parse(localStorage.getItem('vocab_state_cache')) || {}); } catch(e) { return defaults; }
+}
+
+// ============================================================================
+// AUTH
+// ============================================================================
+const Auth = {
+  async init() {
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await this.onLoggedIn(session.user);
+    } else {
+      this.showAuthScreen();
+    }
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        this.onLoggedIn(session.user);
+      } else if (event === 'SIGNED_OUT') {
+        this.showAuthScreen();
+      }
+    });
+  },
+
+  showAuthScreen() {
+    el('auth-screen').classList.remove('hidden');
+    el('app-screen').classList.remove('active');
+  },
+
+  async onLoggedIn(user) {
+    el('auth-screen').classList.add('hidden');
+    el('app-screen').classList.add('active');
+    el('user-email-display').textContent = user.email;
+    // Load data from cloud
+    try {
+      appData.words = await CloudData.fetchWords();
+      cacheWordsLocal(appData.words);
+      const cloudState = await CloudData.fetchState();
+      if (cloudState) {
+        appData.state = cloudState;
+      } else {
+        // Try local cache
+        appData.state = getCachedState();
+      }
+      // Reset daily counters if new day
+      const today = todayStr();
+      if (appData.state.lastQuizDate !== today) {
+        appData.state.lastQuizDate = today;
+        appData.state.todayStudiedCount = 0;
+        appData.state.todayMasteredCount = 0;
+        appData.state.quizSessionWordCount = 0;
+        appData.state.quizSessionWords = [];
+        appData.state.lastPassageAt = 0;
+      }
+      if (!appData.state.dailyReviewCount) appData.state.dailyReviewCount = {};
+      if (!appData.state.checkInDates) appData.state.checkInDates = [];
+      cacheStateLocal(appData.state);
+      await CloudData.saveState(appData.state);
+    } catch(e) {
+      console.error('Failed to load cloud data, using cache:', e);
+      appData.words = getCachedWords();
+      appData.state = getCachedState();
+    }
+    // Init UI
+    initEvents();
+    UI.updateStreakBadge();
+    UI.renderStudy();
+    DataManager.checkIn(appData.state);
+  },
+
+  async login(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+    return { success: true };
+  },
+
+  async signup(email, password) {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return { error: error.message };
+    // If email confirmation is off, user is signed in immediately
+    if (data.user && data.session) {
+      return { success: true, autoLogin: true };
+    }
+    return { success: true, autoLogin: false, message: '请检查邮箱并点击确认链接（如开启了邮箱验证）' };
+  },
+
+  async logout() {
+    await supabase.auth.signOut();
+    localStorage.removeItem('vocab_words_cache');
+    localStorage.removeItem('vocab_state_cache');
+    appData.words = [];
+    appData.state = getCachedState();
+  },
+};
+
+// ============================================================================
+// DATA MANAGER (local + cloud sync)
+// ============================================================================
+const DataManager = {
+  async checkIn(state) {
+    const today = todayStr();
+    if (!state.checkInDates.includes(today)) {
+      state.checkInDates.push(today);
+      state.checkInDates.sort();
+    }
+    if (state.lastQuizDate !== today) {
+      state.todayStudiedCount = 0;
+      state.todayMasteredCount = 0;
+      state.quizSessionWordCount = 0;
+      state.quizSessionWords = [];
+      state.lastPassageAt = 0;
+      state.lastQuizDate = today;
+    }
+    await this.syncState(state);
+  },
+
+  async syncState(state) {
+    cacheStateLocal(state);
+    if (supabase) {
+      try { await CloudData.saveState(state); } catch(e) { console.error('State sync error:', e); }
+    }
+  },
+
+  async addWord(english, chinese, breakdown) {
+    const word = {
+      id: uuid(),
+      english: english.trim(),
+      chinese: chinese.trim(),
+      breakdown: breakdown.trim(),
+      status: 'new',
+      correctStreak: 0,
+      totalCorrect: 0,
+      totalWrong: 0,
+      lastCorrectDate: null,
+      lastAnswerCorrect: false,
+      masteredAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    if (supabase) {
+      await CloudData.saveWord(word);
+    }
+    appData.words.unshift(word);
+    cacheWordsLocal(appData.words);
+    return word;
+  },
+
+  async deleteWord(id) {
+    if (supabase) {
+      await CloudData.deleteWord(id);
+    }
+    appData.words = appData.words.filter(w => w.id !== id);
+    cacheWordsLocal(appData.words);
+  },
+
+  async updateWord(id, updates) {
+    const idx = appData.words.findIndex(w => w.id === id);
+    if (idx === -1) return;
+    Object.assign(appData.words[idx], updates);
+    if (supabase) {
+      await CloudData.saveWord(appData.words[idx]);
+    }
+    cacheWordsLocal(appData.words);
+  },
+
+  getStreak(state) {
+    if (!state.checkInDates.length) return 0;
+    const dates = [...state.checkInDates].sort();
+    let streak = 0;
+    const today = todayStr();
+    let check = new Date(today);
+
+    for (let i = dates.length - 1; i >= 0; i--) {
+      const expected = check.getFullYear() + '-' + String(check.getMonth()+1).padStart(2,'0') + '-' + String(check.getDate()).padStart(2,'0');
+      if (dates[i] === expected) {
+        streak++;
+        check.setDate(check.getDate() - 1);
+      } else if (i === dates.length - 1 && dates[i] !== todayStr()) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yestStr = yesterday.getFullYear() + '-' + String(yesterday.getMonth()+1).padStart(2,'0') + '-' + String(yesterday.getDate()).padStart(2,'0');
+        if (dates[i] === yestStr) {
+          streak++;
+          check = new Date(yesterday);
+          check.setDate(check.getDate() - 1);
+          continue;
+        }
+        break;
+      } else { break; }
+    }
+    return streak;
+  },
+
+  exportData() {
+    return JSON.stringify({ words: appData.words, state: appData.state, exportedAt: new Date().toISOString() }, null, 2);
+  },
+
+  async importData(jsonStr) {
+    try {
+      const data = JSON.parse(jsonStr);
+      if (!data.words || !Array.isArray(data.words)) throw new Error('格式错误');
+      // Merge into cloud
+      if (supabase) {
+        for (const w of data.words) {
+          await CloudData.saveWord(w);
+        }
+        appData.words = await CloudData.fetchWords();
+      } else {
+        appData.words = data.words;
+      }
+      if (data.state) {
+        appData.state = Object.assign(appData.state, data.state);
+        await this.syncState(appData.state);
+      }
+      cacheWordsLocal(appData.words);
+      return { success: true, count: data.words.length };
+    } catch(e) {
+      return { success: false, error: e.message };
+    }
+  },
+};
+
+// ============================================================================
+// SPEECH
+// ============================================================================
+const SpeechManager = {
+  synth: window.speechSynthesis,
+  isAvailable() { return !!this.synth; },
+  speak(text, rate = 0.9) {
+    if (!this.isAvailable()) return null;
+    this.synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = rate; u.pitch = 1;
+    const voices = this.synth.getVoices();
+    const v = voices.find(x => x.lang.startsWith('en') && x.name.includes('Google'))
+      || voices.find(x => x.lang.startsWith('en-US'))
+      || voices.find(x => x.lang.startsWith('en'));
+    if (v) u.voice = v;
+    this.synth.speak(u);
+    return u;
+  },
+  speakSlowly(text) { return this.speak(text, 0.7); },
+};
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
+
+// ============================================================================
+// SENTENCE & PASSAGE GENERATOR
+// ============================================================================
+const SENTENCE_TEMPLATES = [
+  'The word "{word}" is very useful in daily conversation.',
+  'People often use "{word}" when they talk about this topic.',
+  'Everyone agrees that "{word}" is an important word to know.',
+  'The teacher explains what "{word}" means to the class.',
+  'I think "{word}" describes this situation perfectly.',
+  'This book uses "{word}" many times in every chapter.',
+  '{word} appears frequently in English newspapers.',
+  'My friend always says "{word}" when she is excited.',
+  'I am practicing how to use "{word}" in a sentence right now.',
+  'Many students are learning "{word}" for the upcoming test.',
+  'Yesterday I looked up "{word}" in the dictionary.',
+  'She used "{word}" correctly in her essay last week.',
+  'He finally understood what "{word}" meant after the lesson.',
+  'They learned the word "{word}" during their English class.',
+  'I will try to use "{word}" more often in my writing.',
+  'You are going to need "{word}" for the next assignment.',
+  'We will remember "{word}" because it is so useful.',
+  'I did not know the meaning of "{word}" until today.',
+  'You should not forget to review "{word}" before the exam.',
+  'He does not understand how to use "{word}" properly yet.',
+  'It is not easy to remember "{word}" without practice.',
+  'Do you know how to pronounce "{word}" correctly?',
+  'Can you give me an example sentence using "{word}"?',
+  'Have you ever heard someone say "{word}" in a movie?',
+  'What does "{word}" remind you of?',
+  'You could use "{word}" to express your opinion more clearly.',
+  'Students must learn "{word}" before moving to the next level.',
+  'I should write down "{word}" so I do not forget it.',
+  'Although "{word}" seems simple, it has a deep meaning.',
+  'One of the best ways to learn "{word}" is to use it in context.',
+];
+
+const PASSAGE_FRAMES = [
+  {
+    title: 'My Vocabulary Journey',
+    sentences: [
+      'Today I studied several new English words. The first one was "{w0}", which is quite common in English.',
+      'Then I learned "{w1}" and "{w2}" — these two words are related to each other.',
+      '"{w3}" was a bit challenging, but I practiced it many times.',
+      'I also reviewed "{w4}", "{w5}", and "{w6}" to make sure I remember them.',
+      'The most interesting word was "{w7}" because it sounds very nice.',
+      '"{w8}" and "{w9}" were easier because I had seen them before.',
+      'Overall, this was a productive study session!',
+    ],
+  },
+  {
+    title: 'A Day of Learning',
+    sentences: [
+      'This morning, I decided to expand my vocabulary. I started with "{w0}".',
+      'After that, I wrote down "{w1}" and "{w2}" in my notebook.',
+      'My teacher told me that "{w3}" is frequently used in academic writing.',
+      'I practiced saying "{w4}" out loud to improve my pronunciation.',
+      'Later, I made sentences using "{w5}", "{w6}", and "{w7}".',
+      'The words "{w8}" and "{w9}" completed my study list for the day.',
+      'I feel confident that I can use all of these words correctly now.',
+    ],
+  },
+  {
+    title: 'Words in Context',
+    sentences: [
+      'Learning vocabulary is like collecting treasures. "{w0}" is one such treasure.',
+      'I discovered that "{w1}" and "{w2}" often appear together in sentences.',
+      'When I read a story, I noticed the author used "{w3}" to describe the main character.',
+      '"{w4}" is a word that can change the meaning of a whole sentence.',
+      'I compared "{w5}" with "{w6}" and found they have different uses.',
+      'After reviewing "{w7}", "{w8}", and "{w9}", I tested myself.',
+      'Now I can recognize all ten words whenever I see them!',
+    ],
+  },
+];
+
+function fillTemplate(template, word) {
+  return template.replace(/\{word\}/g, '<span class="highlight">'+word+'</span>');
+}
+function fillTemplatePlain(template, word) {
+  return template.replace(/\{word\}/g, word);
+}
+function generateExampleSentences(word) {
+  return pickRandom(SENTENCE_TEMPLATES, 3).map(t => ({
+    html: fillTemplate(t, word),
+    plain: fillTemplatePlain(t, word),
+  }));
+}
+function generateSentenceWithBlank(word) {
+  const template = pickRandom(SENTENCE_TEMPLATES, 1)[0];
+  const plain = fillTemplatePlain(template, word);
+  const blanked = plain.replace(new RegExp(escapeRegex(word), 'gi'), '___');
+  return { sentence: blanked, answer: word, template: plain };
+}
+function generatePassage(words) {
+  const frame = PASSAGE_FRAMES[Math.floor(Math.random() * PASSAGE_FRAMES.length)];
+  const w = words.slice(0, 10);
+  while (w.length < 10) w.push('example');
+  let html = '';
+  frame.sentences.forEach(s => {
+    let filled = s;
+    for (let j = 0; j < 10; j++) filled = filled.replace('{w'+j+'}', '<span class="pw">'+w[j]+'</span>');
+    html += '<p style="margin-bottom:8px;">'+filled+'</p>';
+  });
+  const q1Word = w[Math.floor(Math.random()*5)];
+  const q1 = { question: 'Which word did the passage describe as interesting or useful?', options: shuffle([q1Word, w[5], w[7], w[9]]), answer: q1Word };
+  const q2 = { question: 'How many words were studied in this passage?', options: shuffle(['10', '8', '6', '12']), answer: '10' };
+  return { title: frame.title, html, words: w, questions: [q1, q2] };
+}
+
+// ============================================================================
+// QUIZ ENGINE
+// ============================================================================
+const QuizEngine = {
+  getReviewableWords(words, state) {
+    const today = todayStr();
+    return words.filter(w => w.status === 'new').filter(w => {
+      if (w.lastCorrectDate === null && !w.lastAnswerCorrect) return true;
+      if (w.lastAnswerCorrect === false) return true;
+      const daysAgo = dateDiffDays(w.lastCorrectDate, today);
+      if (daysAgo === 0) return true;
+      if (daysAgo === 1) return Math.random() < 0.5;
+      return false;
+    });
+  },
+
+  getDistractors(correctWord, allWords, count) {
+    const others = allWords.filter(w => w.id !== correctWord.id);
+    return others.length < count ? pickRandom(others, others.length) : pickRandom(others, count);
+  },
+
+  generateQuestion(word, allWords, lastType) {
+    const filtered = [1,2,3,4,5,6].filter(t => {
+      if (t === 6 && allWords.length < 3) return false;
+      if ((t===1||t===2||t===3) && allWords.length < 4) return false;
+      return true;
+    });
+    const pool = filtered.filter(t => t !== lastType);
+    const type = pool.length ? pool[Math.floor(Math.random()*pool.length)] : filtered[Math.floor(Math.random()*filtered.length)];
+    const q = { type, word };
+
+    switch(type) {
+      case 1:
+        q.prompt = '请选择「'+word.chinese+'」对应的英文单词：';
+        q.options = shuffle([word, ...this.getDistractors(word, allWords, 3)]);
+        q.correctAnswer = word.id;
+        break;
+      case 2:
+        q.prompt = '「<span class="word-display">'+word.english+'</span>」的中文意思是？';
+        q.options = shuffle([
+          { id: word.id, text: word.chinese },
+          ...this.getDistractors(word, allWords, 3).map(w => ({ id: w.id, text: w.chinese })),
+        ]);
+        q.correctAnswer = word.id;
+        break;
+      case 3:
+        q.prompt = '请听发音，选择对应的单词：';
+        q.audioWord = word.english;
+        q.options = shuffle([word, ...this.getDistractors(word, allWords, 3)]);
+        q.correctAnswer = word.id;
+        break;
+      case 4:
+        q.prompt = '请根据中文意思，拼写出英文单词：';
+        q.chineseHint = word.chinese;
+        q.correctAnswer = word.english.toLowerCase().trim();
+        break;
+      case 5:
+        q.prompt = '请补全单词的正确拼写：';
+        q.displayWord = this.generateMissingLetters(word.english);
+        q.correctAnswer = word.english.toLowerCase().trim();
+        break;
+      case 6:
+        q.prompt = '请将单词拖放到正确的句子空白处：';
+        q.dragWord = word.english;
+        const correct = generateSentenceWithBlank(word.english);
+        const distractors = this.getDistractors(word, allWords, 2);
+        const sentences = [correct, ...distractors.map(d => generateSentenceWithBlank(d.english))];
+        q.sentences = shuffle(sentences);
+        q.correctSentenceIndex = q.sentences.indexOf(correct);
+        break;
+    }
+    return q;
+  },
+
+  generateMissingLetters(english) {
+    if (english.length <= 2) return english[0]+' _ ';
+    const chars = english.split('');
+    const rest = chars.slice(1);
+    const numToHide = Math.max(1, Math.floor(rest.length*0.4));
+    const hideIndices = pickRandom(rest.map((_,i)=>i), Math.min(numToHide, rest.length));
+    const display = [chars[0]];
+    rest.forEach((c,i) => { display.push(hideIndices.includes(i)?'_':c); });
+    return display.join(' ');
+  },
+
+  validate(q, answer) {
+    switch(q.type) {
+      case 1: case 2: case 3: return answer === q.correctAnswer;
+      case 4: case 5: return answer.toLowerCase().trim() === q.correctAnswer.toLowerCase().trim();
+      case 6: return answer === q.correctSentenceIndex;
+    }
+    return false;
+  },
+};
+
+// ============================================================================
+// APP STATE
+// ============================================================================
+const appData = {
+  words: [],
+  state: {},
+  currentQuestion: null,
+  currentBankFilter: 'new',
+  lastQuestionType: null,
+  quizQueue: [],
+  quizQueueIndex: 0,
+  isQuizActive: false,
+};
+
+// ============================================================================
+// UI RENDERER
+// ============================================================================
+const UI = {
+  switchTab(panelId) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('#tab-bar .tab').forEach(t => t.classList.remove('active'));
+    const panel = el(panelId); if (panel) panel.classList.add('active');
+    const tab = document.querySelector('[data-panel="'+panelId+'"]'); if (tab) tab.classList.add('active');
+    if (panelId === 'panel-study') { DataManager.checkIn(appData.state); this.renderStudy(); }
+    else if (panelId === 'panel-wordbank') this.renderWordBank();
+    else if (panelId === 'panel-stats') this.renderStats();
+    this.updateStreakBadge();
+  },
+
+  updateStreakBadge() {
+    el('streak-badge').textContent = '🔥 '+DataManager.getStreak(appData.state)+'天';
+  },
+
+  // --- Study ---
+  renderStudy() {
+    const reviewable = QuizEngine.getReviewableWords(appData.words, appData.state);
+    el('review-count').textContent = '📋 今日待复习：'+reviewable.length+' 个单词';
+    if (reviewable.length === 0) {
+      el('quiz-container').innerHTML = '<div class="no-review"><div class="emoji">🎉</div><div class="msg">今天没有需要复习的单词！<br>去「词库」添加新词，或者休息一下吧~</div></div>';
+      el('passage-container').innerHTML = '';
+      el('session-end-container').innerHTML = '';
+      return;
+    }
+    appData.quizQueue = shuffle(reviewable);
+    appData.quizQueueIndex = 0;
+    appData.isQuizActive = true;
+    el('passage-container').innerHTML = '';
+    el('session-end-container').innerHTML = '';
+    this.renderNextQuestion();
+  },
+
+  renderNextQuestion() {
+    if (appData.quizQueueIndex >= appData.quizQueue.length) { this.renderSessionEnd(); return; }
+    const wordCount = appData.state.quizSessionWordCount;
+    if (wordCount > 0 && wordCount % 10 === 0 && wordCount > (appData.state.lastPassageAt||0) && appData.state.quizSessionWords.length >= 10) {
+      appData.state.lastPassageAt = wordCount;
+      DataManager.syncState(appData.state);
+      this.renderPassage(); return;
+    }
+    const word = appData.quizQueue[appData.quizQueueIndex];
+    const q = QuizEngine.generateQuestion(word, appData.words, appData.lastQuestionType);
+    appData.currentQuestion = q;
+    appData.lastQuestionType = q.type;
+
+    const labels = {1:'📝 看中文选英文',2:'📝 看英文选中文',3:'🎧 听发音选单词',4:'✍️ 看中文默写英文',5:'🔤 补全缺失字母',6:'🖱️ 拖放单词到句子'};
+    let html = '<div class="quiz-card" id="quiz-card">';
+    html += '<div class="quiz-type-label">'+labels[q.type]+'</div>';
+    html += '<div class="quiz-prompt">'+q.prompt+'</div>';
+    if (q.chineseHint) html += '<div class="quiz-prompt" style="font-size:18px;color:var(--primary);">'+q.chineseHint+'</div>';
+
+    switch(q.type) {
+      case 1: html += '<div class="options-grid">'+q.options.map(o => '<button class="option-btn" data-answer="'+o.id+'">'+o.english+'</button>').join('')+'</div>'; break;
+      case 2: html += '<div class="options-grid">'+q.options.map(o => '<button class="option-btn" data-answer="'+o.id+'">'+o.text+'</button>').join('')+'</div>'; break;
+      case 3:
+        html += '<button class="listen-btn" id="btn-listen-q"><span class="speaker-icon">🔊</span> 点击听发音</button>';
+        html += '<div class="options-grid">'+q.options.map(o => '<button class="option-btn" data-answer="'+o.id+'">'+o.english+'</button>').join('')+'</div>';
+        break;
+      case 4:
+        html += '<div class="quiz-input-row"><input type="text" class="quiz-input" id="quiz-input" placeholder="请输入英文单词..." autocomplete="off" autocapitalize="off" spellcheck="false"><button class="submit-btn" id="btn-submit">确定</button></div>';
+        break;
+      case 5:
+        html += '<div class="missing-letters" id="missing-display">'+q.displayWord+'</div>';
+        html += '<div class="quiz-input-row"><input type="text" class="quiz-input" id="quiz-input" placeholder="请输入完整单词..." autocomplete="off" autocapitalize="off" spellcheck="false"><button class="submit-btn" id="btn-submit">确定</button></div>';
+        break;
+      case 6:
+        html += '<div style="text-align:center;"><div class="drag-word" id="drag-word" draggable="true">'+q.dragWord+'</div></div>';
+        html += '<div class="drop-zones">'+q.sentences.map((s,i) => '<div class="drop-zone" data-index="'+i+'" id="drop-zone-'+i+'">'+s.sentence+'</div>').join('')+'</div>';
+        html += '<div style="text-align:center;margin-top:14px;color:var(--text-tertiary);font-size:14px;font-weight:500;">💡 点击单词选中，再点击目标句子（桌面端可拖拽）</div>';
+        break;
+    }
+    html += '<div class="answer-reveal" id="answer-reveal" style="display:none;"></div></div>';
+
+    el('quiz-container').innerHTML = html;
+    el('quiz-container').style.display = 'block';
+    el('passage-container').innerHTML = '';
+    el('session-end-container').innerHTML = '';
+    this.bindQuizEvents(q);
+  },
+
+  bindQuizEvents(q) {
+    const card = el('quiz-card');
+    card.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        if (this.classList.contains('selected-correct')||this.classList.contains('selected-wrong')) return;
+        UI.handleAnswer(QuizEngine.validate(q, this.dataset.answer), this.dataset.answer, q, card, this);
+      });
+    });
+    const listenBtn = el('btn-listen-q');
+    if (listenBtn) { listenBtn.addEventListener('click', () => SpeechManager.speakSlowly(q.audioWord)); setTimeout(() => SpeechManager.speakSlowly(q.audioWord), 300); }
+    const submitBtn = el('btn-submit');
+    const quizInput = el('quiz-input');
+    if (submitBtn && quizInput) {
+      const doSubmit = () => { const a = quizInput.value; UI.handleAnswer(QuizEngine.validate(q, a), a, q, card, quizInput); };
+      submitBtn.addEventListener('click', doSubmit);
+      quizInput.addEventListener('keydown', e => { if (e.key==='Enter') doSubmit(); });
+      setTimeout(() => quizInput.focus(), 100);
+    }
+    if (q.type === 6) this.setupDragAndDrop(q, card);
+  },
+
+  setupDragAndDrop(q, card) {
+    const dragWord = el('drag-word');
+    const dropZones = card.querySelectorAll('.drop-zone');
+    if (!dragWord) return;
+    dragWord.addEventListener('click', e => { e.stopPropagation(); dragWord.classList.toggle('selected'); dropZones.forEach(dz => dz.classList.remove('drag-over')); });
+    dropZones.forEach(dz => {
+      dz.addEventListener('click', () => { if (dragWord.classList.contains('selected')) { const idx = parseInt(dz.dataset.index); UI.handleAnswer(idx===q.correctSentenceIndex, idx, q, card, dz); dragWord.classList.remove('selected'); } });
+      dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+      dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+      dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); UI.handleAnswer(parseInt(dz.dataset.index)===q.correctSentenceIndex, parseInt(dz.dataset.index), q, card, dz); });
+    });
+    dragWord.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain',''); dragWord.classList.add('dragging'); });
+    dragWord.addEventListener('dragend', () => { dragWord.classList.remove('dragging'); dropZones.forEach(dz => dz.classList.remove('drag-over')); });
+    card.addEventListener('click', function(e) { if (!e.target.closest('.drag-word') && !e.target.closest('.drop-zone')) dragWord.classList.remove('selected'); });
+  },
+
+  handleAnswer(isCorrect, answer, q, card, targetEl) {
+    card.querySelectorAll('.option-btn').forEach(b => { b.style.pointerEvents='none'; if (b.dataset.answer===q.correctAnswer) b.classList.add('reveal-correct'); });
+    const input = card.querySelector('.quiz-input'); if (input) input.disabled=true;
+    const submit = card.querySelector('.submit-btn'); if (submit) submit.disabled=true;
+    const dragW = card.querySelector('.drag-word'); if (dragW) dragW.style.pointerEvents='none';
+    if (targetEl) { targetEl.classList.add(isCorrect?'selected-correct':'selected-wrong'); }
+    if (input) { input.classList.add(isCorrect?'correct':'wrong'); }
+
+    const toast = document.createElement('div');
+    toast.className = 'feedback-toast '+(isCorrect?'correct':'wrong');
+    toast.textContent = isCorrect ? '✅ 回答正确！' : '❌ 回答错误';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 1200);
+    card.classList.add(isCorrect?'correct':'wrong');
+
+    const reveal = el('answer-reveal');
+    if (reveal && !isCorrect) {
+      let correctDisplay = '';
+      switch(q.type) {
+        case 1: correctDisplay='正确答案：<strong>'+q.word.english+'</strong>'; break;
+        case 2: correctDisplay='正确答案：<strong>'+q.word.chinese+'</strong>'; break;
+        case 3: correctDisplay='正确答案：<strong>'+q.word.english+'</strong>'; break;
+        case 4: case 5: correctDisplay='正确答案：<strong>'+q.correctAnswer+'</strong>'; break;
+        case 6: correctDisplay='正确句子：<strong>'+q.sentences[q.correctSentenceIndex].template+'</strong>'; break;
+      }
+      reveal.innerHTML = correctDisplay;
+      reveal.style.display = 'block';
+    } else if (reveal) { reveal.style.display = 'none'; }
+
+    this.updateWordStats(q.word.id, isCorrect);
+
+    setTimeout(() => {
+      appData.quizQueueIndex++;
+      appData.state.quizSessionWordCount++;
+      appData.state.quizSessionWords.push(q.word.english);
+      if (appData.state.quizSessionWords.length > 20) appData.state.quizSessionWords = appData.state.quizSessionWords.slice(-20);
+      DataManager.syncState(appData.state);
+      this.renderNextQuestion();
+    }, isCorrect ? 800 : 1800);
+  },
+
+  async updateWordStats(wordId, isCorrect) {
+    const word = appData.words.find(w => w.id === wordId);
+    if (!word) return;
+    const today = todayStr();
+    if (isCorrect) {
+      word.correctStreak = Math.min(3, word.correctStreak+1);
+      word.totalCorrect++;
+      word.lastCorrectDate = today;
+      word.lastAnswerCorrect = true;
+      if (word.correctStreak >= 3) { word.status = 'mastered'; word.masteredAt = new Date().toISOString(); appData.state.todayMasteredCount++; }
+    } else {
+      word.correctStreak = 0;
+      word.totalWrong++;
+      word.lastAnswerCorrect = false;
+    }
+    appData.state.todayStudiedCount++;
+    appData.state.dailyReviewCount[today] = (appData.state.dailyReviewCount[today]||0) + 1;
+    await DataManager.updateWord(wordId, {
+      correctStreak: word.correctStreak, totalCorrect: word.totalCorrect, totalWrong: word.totalWrong,
+      lastCorrectDate: word.lastCorrectDate, lastAnswerCorrect: word.lastAnswerCorrect,
+      status: word.status, masteredAt: word.masteredAt,
+    });
+  },
+
+  renderPassage() {
+    const words = appData.state.quizSessionWords.slice(-10);
+    const passage = generatePassage(words);
+    el('quiz-container').style.display = 'none';
+    let html = '<div class="passage-card animate-pop"><div class="passage-title">📄 '+passage.title+'</div><div class="passage-text">'+passage.html+'</div>';
+    const answered = {};
+    passage.questions.forEach((pq, qi) => {
+      html += '<div class="passage-question">❓ '+(qi+1)+'. '+pq.question+'</div>';
+      html += '<div class="passage-options" id="passage-options-'+qi+'">'+pq.options.map(opt => '<button class="passage-option" data-q="'+qi+'" data-answer="'+opt+'">'+opt+'</button>').join('')+'</div>';
+    });
+    html += '<div id="passage-feedback" style="text-align:center;margin-top:12px;"></div>';
+    html += '<button class="btn btn-primary" id="btn-passage-continue" style="width:100%;margin-top:12px;display:none;">继续学习 ➡️</button></div>';
+    el('passage-container').innerHTML = html;
+
+    el('passage-container').querySelectorAll('.passage-option').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const qi = parseInt(this.dataset.q);
+        if (answered[qi]) return;
+        answered[qi] = true;
+        const correct = passage.questions[qi].answer;
+        const isCorrect = this.dataset.answer === correct;
+        const optsContainer = el('passage-options-'+qi);
+        optsContainer.querySelectorAll('.passage-option').forEach(b => { b.style.pointerEvents='none'; if (b.dataset.answer===correct) b.classList.add('chosen-correct'); if (b===this&&!isCorrect) b.classList.add('chosen-wrong'); });
+        el('passage-feedback').innerHTML = isCorrect ? '<span style="color:var(--success);">✅ 正确！</span>' : '<span style="color:var(--danger);">❌ 正确答案是：'+correct+'</span>';
+        if (Object.keys(answered).length >= passage.questions.length) el('btn-passage-continue').style.display = 'block';
+      });
+    });
+    el('btn-passage-continue').addEventListener('click', () => { el('passage-container').innerHTML=''; el('quiz-container').style.display='block'; this.renderNextQuestion(); });
+  },
+
+  renderSessionEnd() {
+    appData.isQuizActive = false;
+    el('quiz-container').style.display = 'none';
+    el('passage-container').innerHTML = '';
+    const mastered = appData.state.todayMasteredCount;
+    const studied = appData.state.todayStudiedCount;
+    let emoji = studied ? (mastered ? '🏆' : '🎉') : '😴';
+    let msg = studied ? (mastered ? '恭喜！今天掌握了 '+mastered+' 个新单词！' : '太棒了！已完成今天的所有复习。') : '今天还没有学习任何单词，明天再来吧！';
+    el('session-end-container').innerHTML = '<div class="session-summary animate-pop"><div class="big-emoji">'+emoji+'</div><div class="summary-text">'+msg+'</div><div class="summary-stats"><div class="ss-stat"><div class="ss-stat-val">'+studied+'</div><div class="ss-stat-lbl">今日学习</div></div><div class="ss-stat"><div class="ss-stat-val">'+mastered+'</div><div class="ss-stat-lbl">今日掌握</div></div></div><button class="btn btn-primary" style="margin-top:20px;" onclick="UI.renderStudy()">🔄 重新检查复习</button></div>';
+  },
+
+  // --- Word Bank ---
+  renderWordBank() {
+    const filter = appData.currentBankFilter;
+    el('wb-tab-new').classList.toggle('active', filter==='new');
+    el('wb-tab-mastered').classList.toggle('active', filter==='mastered');
+    const searchTerm = el('search-input').value.toLowerCase().trim();
+    let filtered = appData.words.filter(w => w.status === filter);
+    if (searchTerm) filtered = filtered.filter(w => w.english.toLowerCase().includes(searchTerm) || w.chinese.includes(searchTerm));
+    const listEl = el('word-list');
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">📭 暂无单词，点击上方按钮添加吧！</div>';
+    } else {
+      listEl.innerHTML = filtered.map(w => {
+        const total = w.totalCorrect + w.totalWrong;
+        const pct = total > 0 ? Math.round((w.totalCorrect/total)*100) : 0;
+        const pc = w.status === 'mastered' ? ' mastered' : '';
+        return '<div class="word-card" id="word-card-'+w.id+'" data-id="'+w.id+'"><div class="word-card-header"><div class="word-card-main" data-action="expand" data-id="'+w.id+'"><div class="word-card-english">'+w.english+'</div><div class="word-card-chinese">'+w.chinese+'</div></div><div class="word-card-actions"><button class="card-action-btn" data-action="speak" data-id="'+w.id+'" title="朗读">🔊</button><button class="card-action-btn delete" data-action="delete" data-id="'+w.id+'" title="删除">🗑️</button></div></div><div class="progress-bar-wrap"><div class="progress-bar-fill'+pc+'" style="width:'+pct+'%;"></div></div><div class="word-detail" id="detail-'+w.id+'">'+(w.breakdown?'<div class="word-detail-row"><div class="word-detail-label">词根词缀拆解</div><div>'+w.breakdown+'</div></div>':'')+'<div class="word-detail-row"><div class="word-detail-label">学习记录</div><div>✅ 答对 <strong>'+w.totalCorrect+'</strong> 次 &nbsp; ❌ 答错 <strong>'+w.totalWrong+'</strong> 次</div><div>熟练度：<strong>'+pct+'%</strong> &nbsp; 连续答对：<strong>'+w.correctStreak+'/3</strong></div></div><div class="word-detail-row"><div class="word-detail-label">例句</div><div class="example-sentences" id="examples-'+w.id+'">'+generateExampleSentences(w.english).map(s => '<div class="example-sentence">'+s.html+'</div>').join('')+'</div></div><button class="detail-listen-btn" data-action="speak" data-id="'+w.id+'">🔊 朗读</button></div></div>';
+      }).join('');
+    }
+    el('wb-tab-new').textContent = '🌱 生词库 ('+appData.words.filter(w=>w.status==='new').length+')';
+    el('wb-tab-mastered').textContent = '✅ 熟词库 ('+appData.words.filter(w=>w.status==='mastered').length+')';
+    this.bindWordCardEvents();
+  },
+
+  bindWordCardEvents() {
+    el('word-list').querySelectorAll('[data-action="expand"]').forEach(el => { el.addEventListener('click', function() { document.getElementById('word-card-'+this.dataset.id).classList.toggle('expanded'); }); });
+    el('word-list').querySelectorAll('[data-action="speak"]').forEach(el => { el.addEventListener('click', function(e) { e.stopPropagation(); const w = appData.words.find(x=>x.id===this.dataset.id); if (w) SpeechManager.speak(w.english); }); });
+    el('word-list').querySelectorAll('[data-action="delete"]').forEach(el => { el.addEventListener('click', async function(e) { e.stopPropagation(); if (confirm('确定删除？')) { await DataManager.deleteWord(this.dataset.id); UI.renderWordBank(); UI.updateStreakBadge(); } }); });
+  },
+
+  // --- Stats ---
+  renderStats() {
+    const mastered = appData.words.filter(w=>w.status==='mastered');
+    const newWords = appData.words.filter(w=>w.status==='new');
+    el('stat-mastered').textContent = mastered.length;
+    el('stat-new').textContent = newWords.length;
+    el('stat-today-studied').textContent = appData.state.todayStudiedCount||0;
+    el('stat-today-mastered').textContent = appData.state.todayMasteredCount||0;
+
+    const days = [];
+    for (let i=6; i>=0; i--) {
+      const d = new Date(); d.setDate(d.getDate()-i);
+      const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      days.push({ key, label:['日','一','二','三','四','五','六'][d.getDay()], count: appData.state.dailyReviewCount[key]||0 });
+    }
+    const max = Math.max(1,...days.map(d=>d.count));
+    el('weekly-chart').innerHTML = days.map(d => {
+      const h = Math.max(4,(d.count/max)*100);
+      return '<div class="chart-bar-wrap"><div class="chart-bar-value">'+d.count+'</div><div class="chart-bar" style="height:'+h+'px;'+(d.key===todayStr()?'background:linear-gradient(180deg,var(--primary-dark),var(--primary));':'')+'"></div><div class="chart-bar-label">'+d.label+'</div></div>';
+    }).join('');
+
+    const recent = mastered.filter(w=>w.masteredAt).sort((a,b)=>new Date(b.masteredAt)-new Date(a.masteredAt)).slice(0,10);
+    el('recent-mastered-list').innerHTML = recent.length ? recent.map(w=>'<div class="stats-list-item"><div><span class="word-en">'+w.english+'</span><span class="word-cn"> — '+w.chinese+'</span></div><span style="color:var(--success);font-size:12px;">✅ 已掌握</span></div>').join('') : '<div style="color:var(--text-secondary);font-size:13px;">暂无掌握记录</div>';
+
+    const weakest = newWords.map(w => { const t=w.totalCorrect+w.totalWrong; return {...w, pct: t?Math.round((w.totalCorrect/t)*100):0}; }).sort((a,b)=>a.pct-b.pct).slice(0,5);
+    el('weakest-list').innerHTML = weakest.length ? weakest.map(w=>'<div class="stats-list-item"><div><span class="word-en">'+w.english+'</span><span class="word-cn"> — '+w.chinese+'</span></div><span class="word-pct">'+w.pct+'%</span></div>').join('') : '<div style="color:var(--text-secondary);font-size:13px;">暂无生词</div>';
+    this.updateStreakBadge();
+  },
+};
+
+// ============================================================================
+// EVENT HANDLERS
+// ============================================================================
+function initEvents() {
+  // Auth tabs
+  document.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.auth-form').forEach(f=>f.classList.remove('active'));
+      this.classList.add('active');
+      const target = this.dataset.authTab;
+      el('form-'+target).classList.add('active');
+    });
+  });
+
+  // Login form
+  el('form-login').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    el('login-error').textContent = '';
+    el('btn-login').disabled = true;
+    el('btn-login').textContent = '登录中...';
+    const email = el('login-email').value.trim();
+    const password = el('login-password').value;
+    if (!email || !password) { el('login-error').textContent = '请填写邮箱和密码'; el('btn-login').disabled=false; el('btn-login').textContent='登 录'; return; }
+    const result = await Auth.login(email, password);
+    if (result.error) { el('login-error').textContent = result.error; el('btn-login').disabled=false; el('btn-login').textContent='登 录'; }
+    // On success, Auth.onLoggedIn handles the rest
+  });
+
+  // Signup form
+  el('form-signup').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    el('signup-error').textContent = '';
+    el('btn-signup').disabled = true;
+    el('btn-signup').textContent = '注册中...';
+    const email = el('signup-email').value.trim();
+    const password = el('signup-password').value;
+    if (!email || !password) { el('signup-error').textContent = '请填写邮箱和密码'; el('btn-signup').disabled=false; el('btn-signup').textContent='注 册'; return; }
+    if (password.length < 6) { el('signup-error').textContent = '密码至少6位'; el('btn-signup').disabled=false; el('btn-signup').textContent='注 册'; return; }
+    const result = await Auth.signup(email, password);
+    if (result.error) { el('signup-error').textContent = result.error; el('btn-signup').disabled=false; el('btn-signup').textContent='注 册'; }
+    else if (result.autoLogin) { /* Auth.onLoggedIn handles */ }
+    else { el('signup-error').textContent = ''; alert('✅ 注册成功！'+(result.message||'请登录')); el('btn-signup').disabled=false; el('btn-signup').textContent='注 册'; }
+  });
+
+  // Logout
+  el('btn-logout').addEventListener('click', async () => { if (confirm('确定退出登录？')) await Auth.logout(); });
+
+  // Tab switching
+  el('tab-bar').addEventListener('click', function(e) { const tab = e.target.closest('.tab'); if (tab) UI.switchTab(tab.dataset.panel); });
+
+  // Word bank filter
+  el('wb-tab-new').addEventListener('click', () => { appData.currentBankFilter='new'; UI.renderWordBank(); });
+  el('wb-tab-mastered').addEventListener('click', () => { appData.currentBankFilter='mastered'; UI.renderWordBank(); });
+  el('search-input').addEventListener('input', () => UI.renderWordBank());
+
+  // Add word
+  el('btn-add-word').addEventListener('click', () => { el('modal-add-word').style.display='flex'; el('add-english').value=''; el('add-chinese').value=''; el('add-breakdown').value=''; setTimeout(()=>el('add-english').focus(),100); });
+  el('btn-add-cancel').addEventListener('click', () => el('modal-add-word').style.display='none');
+  el('btn-add-confirm').addEventListener('click', async () => {
+    const en = el('add-english').value.trim();
+    const cn = el('add-chinese').value.trim();
+    const bd = el('add-breakdown').value.trim();
+    if (!en) { alert('请输入英文单词'); return; }
+    if (!cn) { alert('请输入中文释义'); return; }
+    await DataManager.addWord(en, cn, bd);
+    el('modal-add-word').style.display='none';
+    UI.renderWordBank();
+  });
+
+  // I/O modal
+  el('btn-export').addEventListener('click', () => el('modal-io').style.display='flex');
+  el('btn-io-close').addEventListener('click', () => el('modal-io').style.display='none');
+  el('btn-do-export').addEventListener('click', () => {
+    const json = DataManager.exportData();
+    const blob = new Blob([json],{type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='vocab-backup-'+todayStr()+'.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    alert('✅ 已导出！');
+  });
+  el('btn-do-import').addEventListener('click', () => el('import-file-input').click());
+  el('import-file-input').addEventListener('change', async function(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+      const result = await DataManager.importData(ev.target.result);
+      alert(result.success ? '✅ 成功导入 '+result.count+' 个单词！' : '❌ 导入失败：'+result.error);
+      if (result.success) { UI.renderWordBank(); UI.renderStudy(); UI.renderStats(); }
+    };
+    reader.readAsText(file);
+    el('import-file-input').value = '';
+  });
+
+  // Close modals
+  document.querySelectorAll('.modal-overlay').forEach(o => { o.addEventListener('click', function(e) { if (e.target===this) this.style.display='none'; }); });
+  document.addEventListener('keydown', function(e) { if (e.key==='Escape') document.querySelectorAll('.modal-overlay').forEach(m => { if (m.style.display==='flex') m.style.display='none'; }); });
+}
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+async function init() {
+  const configured = initSupabase();
+  if (!configured) {
+    // No Supabase config — show a notice and fall back to localStorage mode
+    el('auth-screen').classList.add('hidden');
+    el('app-screen').classList.add('active');
+    el('user-email-display').textContent = '离线模式';
+    // Load from local cache (or the old localStorage keys for migration)
+    const oldWords = localStorage.getItem('vocab_words');
+    const oldState = localStorage.getItem('vocab_state');
+    if (oldWords && !localStorage.getItem('vocab_words_cache')) {
+      localStorage.setItem('vocab_words_cache', oldWords);
+    }
+    if (oldState && !localStorage.getItem('vocab_state_cache')) {
+      localStorage.setItem('vocab_state_cache', oldState);
+    }
+    appData.words = getCachedWords();
+    appData.state = getCachedState();
+    // Reset daily if needed
+    const today = todayStr();
+    if (appData.state.lastQuizDate !== today) {
+      appData.state.lastQuizDate = today;
+      appData.state.todayStudiedCount = 0;
+      appData.state.todayMasteredCount = 0;
+      appData.state.quizSessionWordCount = 0;
+      appData.state.quizSessionWords = [];
+      appData.state.lastPassageAt = 0;
+    }
+    if (!appData.state.dailyReviewCount) appData.state.dailyReviewCount = {};
+    if (!appData.state.checkInDates) appData.state.checkInDates = [];
+    cacheStateLocal(appData.state);
+    initEvents();
+    UI.updateStreakBadge();
+    UI.renderStudy();
+    DataManager.checkIn(appData.state);
+  } else {
+    // Supabase configured — init auth
+    await Auth.init();
+  }
+}
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

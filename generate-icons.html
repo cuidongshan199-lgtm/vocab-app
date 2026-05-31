@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Icon Generator</title></head>
+<body style="font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px;">
+  <h2>📖 PWA Icon Generator</h2>
+  <p>点击按钮生成并下载图标文件，放入项目根目录。</p>
+  <button onclick="generateIcons()" style="padding:16px 32px;font-size:18px;background:#3B7DD8;color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;">生成图标</button>
+  <p id="status" style="margin-top:16px;color:#666;"></p>
+  <canvas id="c" style="display:none;"></canvas>
+
+  <script>
+  async function generateIcons() {
+    const s = el('status');
+    s.textContent = '生成中...';
+    const sizes = [
+      { name: 'icon-192.png', px: 192 },
+      { name: 'icon-512.png', px: 512 },
+      { name: 'icon-512-maskable.png', px: 512, maskable: true },
+    ];
+    for (const {name, px, maskable} of sizes) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = px;
+      const ctx = canvas.getContext('2d');
+
+      // Background
+      ctx.fillStyle = '#3B7DD8';
+      if (maskable) {
+        // For maskable, fill full square
+        ctx.fillRect(0, 0, px, px);
+      } else {
+        // Rounded rect
+        const r = px * 0.18;
+        ctx.beginPath();
+        ctx.moveTo(r, 0);
+        ctx.lineTo(px-r, 0);
+        ctx.quadraticCurveTo(px, 0, px, r);
+        ctx.lineTo(px, px-r);
+        ctx.quadraticCurveTo(px, px, px-r, px);
+        ctx.lineTo(r, px);
+        ctx.quadraticCurveTo(0, px, 0, px-r);
+        ctx.lineTo(0, r);
+        ctx.quadraticCurveTo(0, 0, r, 0);
+        ctx.fill();
+      }
+
+      // Emoji text
+      const fontSize = px * (maskable ? 0.55 : 0.5);
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('📖', px/2, px/2);
+
+      // Download
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    s.textContent = '✅ 已生成 3 个图标文件！放入项目根目录即可。';
+  }
+  function el(id) { return document.getElementById(id); }
+  </script>
+</body></html>
