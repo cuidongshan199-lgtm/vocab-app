@@ -1056,33 +1056,17 @@ async function translateText(text, from, to) {
   if (!text || text.length < 2) return '';
   const sl = from === 'en' ? 'en' : 'zh-CN';
   const tl = to === 'en' ? 'en' : 'zh-CN';
-
-  // Try multiple APIs in order
-  const apis = [
-    // API 1: MyMemory
-    async () => {
-      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sl}|${tl}`);
-      const data = await res.json();
-      if (data.responseStatus === 200 && data.responseData) return data.responseData.translatedText;
-      return '';
-    },
-    // API 2: Google (shorter timeout)
-    async () => {
-      const controller = new AbortController();
-      setTimeout(() => controller.abort(), 3000);
-      const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`, { signal: controller.signal });
-      const data = await res.json();
-      if (data && data[0]) return data[0].map(i => i[0]).join('');
-      return '';
-    },
-  ];
-
-  for (const api of apis) {
-    try {
-      const result = await api();
-      if (result) return result;
-    } catch(e) {}
-  }
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sl}|${tl}`, { signal: controller.signal });
+    const data = await res.json();
+    if (data.responseStatus === 200 && data.responseData) {
+      const result = data.responseData.translatedText;
+      // MyMemory sometimes returns the original text if translation fails
+      if (result && result.toLowerCase() !== text.toLowerCase()) return result;
+    }
+  } catch(e) {}
   return '';
 }
 
