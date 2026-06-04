@@ -1054,16 +1054,35 @@ async function getPhonetic(word) {
 
 async function translateText(text, from, to) {
   if (!text || text.length < 2) return '';
-  try {
-    const sl = from === 'en' ? 'en' : 'zh-CN';
-    const tl = to === 'en' ? 'en' : 'zh-CN';
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data && data[0]) {
-      return data[0].map(item => item[0]).join('');
-    }
-  } catch(e) {}
+  const sl = from === 'en' ? 'en' : 'zh-CN';
+  const tl = to === 'en' ? 'en' : 'zh-CN';
+
+  // Try multiple APIs in order
+  const apis = [
+    // API 1: MyMemory
+    async () => {
+      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sl}|${tl}`);
+      const data = await res.json();
+      if (data.responseStatus === 200 && data.responseData) return data.responseData.translatedText;
+      return '';
+    },
+    // API 2: Google (shorter timeout)
+    async () => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`, { signal: controller.signal });
+      const data = await res.json();
+      if (data && data[0]) return data[0].map(i => i[0]).join('');
+      return '';
+    },
+  ];
+
+  for (const api of apis) {
+    try {
+      const result = await api();
+      if (result) return result;
+    } catch(e) {}
+  }
   return '';
 }
 
