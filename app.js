@@ -350,13 +350,15 @@ const DataManager = {
   },
 
   async addWord(english, chinese, breakdown) {
+    const user = await authGetUser();
+    const uid = user ? user.id : null;
     const word = {
-      id: uuid(), user_id: null,
+      id: uuid(), user_id: uid,
       english: english.trim(), chinese: chinese.trim(), breakdown: breakdown.trim(),
       status: 'new', correctStreak: 0, totalCorrect: 0, totalWrong: 0,
       lastCorrectDate: null, lastAnswerCorrect: false, masteredAt: null, createdAt: new Date().toISOString(),
     };
-    try { await saveWord(word); } catch(e) { console.error(e); }
+    try { await saveWord(word); } catch(e) { console.error('Save word error:', e); }
     appData.words.unshift(word);
     cacheWordsLocal(appData.words);
     return word;
