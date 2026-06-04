@@ -898,8 +898,16 @@ const UI = {
         const total = w.totalCorrect + w.totalWrong;
         const pct = total > 0 ? Math.round((w.totalCorrect/total)*100) : 0;
         const pc = w.status === 'mastered' ? ' mastered' : '';
-        return '<div class="word-card" id="word-card-'+w.id+'" data-id="'+w.id+'"><div class="word-card-header"><div class="word-card-main" data-action="expand" data-id="'+w.id+'"><div class="word-card-english">'+w.english+'</div><div class="word-card-chinese">'+w.chinese+'</div></div><div class="word-card-actions"><button class="card-action-btn" data-action="speak" data-id="'+w.id+'" title="朗读">🔊</button><button class="card-action-btn delete" data-action="delete" data-id="'+w.id+'" title="删除">🗑️</button></div></div><div class="progress-bar-wrap"><div class="progress-bar-fill'+pc+'" style="width:'+pct+'%;"></div></div><div class="word-detail" id="detail-'+w.id+'">'+(w.breakdown?'<div class="word-detail-row"><div class="word-detail-label">词根词缀拆解</div><div>'+w.breakdown+'</div></div>':'')+'<div class="word-detail-row"><div class="word-detail-label">学习记录</div><div>✅ 答对 <strong>'+w.totalCorrect+'</strong> 次 &nbsp; ❌ 答错 <strong>'+w.totalWrong+'</strong> 次</div><div>熟练度：<strong>'+pct+'%</strong> &nbsp; 连续答对：<strong>'+w.correctStreak+'/3</strong></div></div><div class="word-detail-row"><div class="word-detail-label">例句</div><div class="example-sentences" id="examples-'+w.id+'">'+generateExampleSentences(w.english).map(s => '<div class="example-sentence">'+s.html+'</div>').join('')+'</div></div><button class="detail-listen-btn" data-action="speak" data-id="'+w.id+'">🔊 朗读</button></div></div>';
+        const phId = 'ph-'+w.id;
+        return '<div class="word-card" id="word-card-'+w.id+'" data-id="'+w.id+'"><div class="word-card-header"><div class="word-card-main" data-action="expand" data-id="'+w.id+'"><div class="word-card-english">'+w.english+' <span class="phonetic" id="'+phId+'"></span></div><div class="word-card-chinese">'+w.chinese+'</div></div><div class="word-card-actions"><button class="card-action-btn" data-action="speak" data-id="'+w.id+'" title="朗读">🔊</button><button class="card-action-btn delete" data-action="delete" data-id="'+w.id+'" title="删除">🗑️</button></div></div><div class="progress-bar-wrap"><div class="progress-bar-fill'+pc+'" style="width:'+pct+'%;"></div></div><div class="word-detail" id="detail-'+w.id+'">'+(w.breakdown?'<div class="word-detail-row"><div class="word-detail-label">词根词缀拆解</div><div>'+w.breakdown+'</div></div>':'')+'<div class="word-detail-row"><div class="word-detail-label">学习记录</div><div>✅ 答对 <strong>'+w.totalCorrect+'</strong> 次 &nbsp; ❌ 答错 <strong>'+w.totalWrong+'</strong> 次</div><div>熟练度：<strong>'+pct+'%</strong> &nbsp; 连续答对：<strong>'+w.correctStreak+'/3</strong></div></div><div class="word-detail-row"><div class="word-detail-label">例句</div><div class="example-sentences" id="examples-'+w.id+'">'+generateExampleSentences(w.english).map(s => '<div class="example-sentence">'+s.html+'</div>').join('')+'</div></div><button class="detail-listen-btn" data-action="speak" data-id="'+w.id+'">🔊 朗读</button></div></div>';
       }).join('');
+      // Fetch phonetics for displayed words
+      filtered.forEach(w => {
+        getPhonetic(w.english).then(ph => {
+          const el = document.getElementById('ph-'+w.id);
+          if (el && ph) el.textContent = ph;
+        });
+      });
     }
     el('wb-tab-new').textContent = '🌱 生词库 ('+appData.words.filter(w=>w.status==='new').length+')';
     el('wb-tab-mastered').textContent = '✅ 熟词库 ('+appData.words.filter(w=>w.status==='mastered').length+')';
@@ -1021,6 +1029,26 @@ function initEvents() {
 // AUTO TRANSLATE — free MyMemory API, no key needed
 // ============================================================================
 let translateTimer = null;
+
+// Phonetics — free dictionary API, fetched on display
+const phoneticCache = {};
+
+async function getPhonetic(word) {
+  const w = word.toLowerCase().trim();
+  if (phoneticCache[w]) return phoneticCache[w];
+  try {
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(w)}`);
+    if (!res.ok) { phoneticCache[w] = ''; return ''; }
+    const data = await res.json();
+    if (data && data[0] && data[0].phonetics) {
+      for (const p of data[0].phonetics) {
+        if (p.text) { phoneticCache[w] = p.text; return p.text; }
+      }
+    }
+  } catch(e) {}
+  phoneticCache[w] = '';
+  return '';
+}
 
 async function translateText(text, from, to) {
   if (!text || text.length < 2) return '';
