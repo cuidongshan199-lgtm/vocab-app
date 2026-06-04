@@ -847,6 +847,15 @@ input, textarea { width: 100%; }
   background: var(--bg-subtle);
 }
 .form-textarea:focus { border-color: var(--primary); background: var(--bg); box-shadow: 0 0 0 4px rgba(59,125,216,0.08); }
+.translate-hint {
+  font-size: 13px;
+  color: var(--primary);
+  padding: 4px 0 8px;
+  font-weight: 500;
+  min-height: 20px;
+  transition: all 0.2s;
+}
+
 .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
 .btn {
   flex: 1;
@@ -1189,8 +1198,9 @@ input, textarea { width: 100%; }
 <div class="modal-overlay" id="modal-add-word" style="display:none;">
   <div class="modal-sheet">
     <div class="modal-title">✏️ 添加单词</div>
-    <div class="form-group"><label class="form-label">英文</label><input type="text" class="form-input" id="add-english" placeholder="例如：unhappy" autocomplete="off"></div>
-    <div class="form-group"><label class="form-label">中文释义</label><input type="text" class="form-input" id="add-chinese" placeholder="例如：不开心的" autocomplete="off"></div>
+    <div class="form-group"><label class="form-label">英文</label><input type="text" class="form-input" id="add-english" placeholder="输入英文自动翻译中文" autocomplete="off"></div>
+    <div class="translate-hint" id="translate-hint" style="display:none;"></div>
+    <div class="form-group"><label class="form-label">中文释义</label><input type="text" class="form-input" id="add-chinese" placeholder="输入中文自动翻译英文" autocomplete="off"></div>
     <div class="form-group"><label class="form-label">词根词缀拆解（选填）</label><textarea class="form-textarea" id="add-breakdown" placeholder="例如：un否定 + happy快乐 → 不快乐的"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="btn-add-cancel">取消</button>

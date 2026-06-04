@@ -975,7 +975,7 @@ function initEvents() {
   el('search-input').addEventListener('input', () => UI.renderWordBank());
 
   // Add word
-  el('btn-add-word').addEventListener('click', () => { el('modal-add-word').style.display='flex'; el('add-english').value=''; el('add-chinese').value=''; el('add-breakdown').value=''; setTimeout(()=>el('add-english').focus(),100); });
+  el('btn-add-word').addEventListener('click', () => { el('modal-add-word').style.display='flex'; el('add-english').value=''; el('add-chinese').value=''; el('add-breakdown').value=''; const h=el('translate-hint'); if(h){h.textContent='';h.style.display='none';} setTimeout(()=>{el('add-english').focus();setupAutoTranslate();},100); });
   el('btn-add-cancel').addEventListener('click', () => el('modal-add-word').style.display='none');
   el('btn-add-confirm').addEventListener('click', async () => {
     const en = el('add-english').value.trim();
@@ -1015,6 +1015,81 @@ function initEvents() {
   // Close modals
   document.querySelectorAll('.modal-overlay').forEach(o => { o.addEventListener('click', function(e) { if (e.target===this) this.style.display='none'; }); });
   document.addEventListener('keydown', function(e) { if (e.key==='Escape') document.querySelectorAll('.modal-overlay').forEach(m => { if (m.style.display==='flex') m.style.display='none'; }); });
+}
+
+// ============================================================================
+// AUTO TRANSLATE — free MyMemory API, no key needed
+// ============================================================================
+let translateTimer = null;
+
+async function translateText(text, from, to) {
+  if (!text || text.length < 2) return '';
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.responseStatus === 200 && data.responseData) {
+      return data.responseData.translatedText;
+    }
+  } catch(e) {}
+  return '';
+}
+
+function isEnglish(text) {
+  return /^[a-zA-Z\s'-]+$/.test(text.trim());
+}
+
+function setupAutoTranslate() {
+  const enInput = el('add-english');
+  const cnInput = el('add-chinese');
+  const hint = el('translate-hint');
+  if (!enInput || !cnInput) return;
+
+  function showHint(text) {
+    if (hint) { hint.textContent = text; hint.style.display = text ? 'block' : 'none'; }
+  }
+
+  // English input → auto translate to Chinese
+  enInput.addEventListener('input', () => {
+    clearTimeout(translateTimer);
+    const val = enInput.value.trim();
+    if (!val || val.length < 2) { showHint(''); return; }
+    if (!isEnglish(val)) return;
+    showHint('🔄 翻译中...');
+    translateTimer = setTimeout(async () => {
+      const result = await translateText(val, 'en', 'zh-CN');
+      if (result && !cnInput.value.trim()) {
+        cnInput.value = result;
+        showHint('✅ 已自动翻译，可手动修改');
+        setTimeout(() => showHint(''), 2000);
+      } else if (result) {
+        showHint('💡 翻译结果：' + result);
+      } else {
+        showHint('');
+      }
+    }, 600);
+  });
+
+  // Chinese input → auto translate to English
+  cnInput.addEventListener('input', () => {
+    clearTimeout(translateTimer);
+    const val = cnInput.value.trim();
+    if (!val || val.length < 1) { showHint(''); return; }
+    if (isEnglish(val)) return;
+    showHint('🔄 翻译中...');
+    translateTimer = setTimeout(async () => {
+      const result = await translateText(val, 'zh-CN', 'en');
+      if (result && !enInput.value.trim()) {
+        enInput.value = result;
+        showHint('✅ 已自动翻译，可手动修改');
+        setTimeout(() => showHint(''), 2000);
+      } else if (result) {
+        showHint('💡 翻译结果：' + result);
+      } else {
+        showHint('');
+      }
+    }, 600);
+  });
 }
 
 // ============================================================================
