@@ -1025,11 +1025,13 @@ let translateTimer = null;
 async function translateText(text, from, to) {
   if (!text || text.length < 2) return '';
   try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+    const sl = from === 'en' ? 'en' : 'zh-CN';
+    const tl = to === 'en' ? 'en' : 'zh-CN';
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
     const res = await fetch(url);
     const data = await res.json();
-    if (data.responseStatus === 200 && data.responseData) {
-      return data.responseData.translatedText;
+    if (data && data[0]) {
+      return data[0].map(item => item[0]).join('');
     }
   } catch(e) {}
   return '';
