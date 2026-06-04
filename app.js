@@ -975,7 +975,7 @@ function initEvents() {
   el('search-input').addEventListener('input', () => UI.renderWordBank());
 
   // Add word
-  el('btn-add-word').addEventListener('click', () => { el('modal-add-word').style.display='flex'; el('add-english').value=''; el('add-chinese').value=''; el('add-breakdown').value=''; const h=el('translate-hint'); if(h){h.textContent='';h.style.display='none';} setTimeout(()=>{el('add-english').focus();setupAutoTranslate();},100); });
+  el('btn-add-word').addEventListener('click', () => { el('modal-add-word').style.display='flex'; el('add-english').value=''; el('add-chinese').value=''; el('add-breakdown').value=''; const h=el('translate-hint'); if(h){h.textContent='';h.style.display='none';} setTimeout(()=>el('add-english').focus(),100); });
   el('btn-add-cancel').addEventListener('click', () => el('modal-add-word').style.display='none');
   el('btn-add-confirm').addEventListener('click', async () => {
     const en = el('add-english').value.trim();
@@ -1040,6 +1040,9 @@ function isEnglish(text) {
 }
 
 function setupAutoTranslate() {
+  if (setupAutoTranslate._done) return;
+  setupAutoTranslate._done = true;
+
   const enInput = el('add-english');
   const cnInput = el('add-chinese');
   const hint = el('translate-hint');
@@ -1049,7 +1052,6 @@ function setupAutoTranslate() {
     if (hint) { hint.textContent = text; hint.style.display = text ? 'block' : 'none'; }
   }
 
-  // English input → auto translate to Chinese
   enInput.addEventListener('input', () => {
     clearTimeout(translateTimer);
     const val = enInput.value.trim();
@@ -1058,19 +1060,16 @@ function setupAutoTranslate() {
     showHint('🔄 翻译中...');
     translateTimer = setTimeout(async () => {
       const result = await translateText(val, 'en', 'zh-CN');
-      if (result && !cnInput.value.trim()) {
+      if (result) {
         cnInput.value = result;
-        showHint('✅ 已自动翻译，可手动修改');
-        setTimeout(() => showHint(''), 2000);
-      } else if (result) {
-        showHint('💡 翻译结果：' + result);
+        showHint('✅ 已翻译，可修改');
+        setTimeout(() => showHint(''), 1500);
       } else {
-        showHint('');
+        showHint('翻译失败，请手动输入');
       }
-    }, 600);
+    }, 500);
   });
 
-  // Chinese input → auto translate to English
   cnInput.addEventListener('input', () => {
     clearTimeout(translateTimer);
     const val = cnInput.value.trim();
@@ -1079,16 +1078,14 @@ function setupAutoTranslate() {
     showHint('🔄 翻译中...');
     translateTimer = setTimeout(async () => {
       const result = await translateText(val, 'zh-CN', 'en');
-      if (result && !enInput.value.trim()) {
+      if (result) {
         enInput.value = result;
-        showHint('✅ 已自动翻译，可手动修改');
-        setTimeout(() => showHint(''), 2000);
-      } else if (result) {
-        showHint('💡 翻译结果：' + result);
+        showHint('✅ 已翻译，可修改');
+        setTimeout(() => showHint(''), 1500);
       } else {
-        showHint('');
+        showHint('翻译失败，请手动输入');
       }
-    }, 600);
+    }, 500);
   });
 }
 
@@ -1096,7 +1093,8 @@ function setupAutoTranslate() {
 // INITIALIZATION
 // ============================================================================
 async function init() {
-  initEvents(); // Bind all events immediately
+  initEvents();
+  setupAutoTranslate();
   await Auth.init();
 }
 
