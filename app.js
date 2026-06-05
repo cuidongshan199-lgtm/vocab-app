@@ -1091,12 +1091,27 @@ async function translateText(text, from, to) {
     } catch(e) {}
 
     // Clean up results: remove English parts, keep only Chinese
+    // Get part of speech from dictionary
+    let pos = '';
+    try {
+      const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`);
+      if (dictRes.ok) {
+        const dictData = await dictRes.json();
+        if (dictData[0] && dictData[0].meanings && dictData[0].meanings[0]) {
+          const rawPos = dictData[0].meanings[0].partOfSpeech;
+          const posMap = { noun:'名词', verb:'动词', adjective:'形容词', adverb:'副词', preposition:'介词', conjunction:'连词', pronoun:'代词', interjection:'感叹词', determiner:'限定词', numeral:'数词', particle:'助词' };
+          pos = posMap[rawPos] || rawPos || '';
+        }
+      }
+    } catch(e) {}
+
     function cleanResult(r) {
       if (!r) return '';
       return r.replace(/\(.*?\)/g, '')
         .replace(/meaning|means|definition/gi, '')
-        .replace(/的含义|的意思|的定义|的含义是|的意思是|的定义是/g, '')
+        .replace(/的含义|的意思|的定义|的含义是|的意思是|的定义是|是指|就是|意味著|意味着/g, '')
         .replace(/^的+|的+$/g, '')
+        .replace(/^[，,。.、\s]+|[，,。.、\s]+$/g, '')
         .trim();
     }
 
@@ -1104,13 +1119,12 @@ async function translateText(text, from, to) {
 
     // Pick the most common result, or the first valid one
     if (results.length > 0) {
-      // If multiple results agree, use that
       const counts = {};
       results.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
       const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-      return best;
+      return pos ? pos + ' ' + best : best;
     }
-    return '';
+    return pos ? pos : '';
   }
 
   // For sentences/phrases, just translate directly
