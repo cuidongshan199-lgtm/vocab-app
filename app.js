@@ -423,29 +423,47 @@ const DataManager = {
 // SPEECH
 // ============================================================================
 const SpeechManager = {
-  audio: null,
+  synth: window.speechSynthesis,
+  bestVoice: null,
+  voicesLoaded: false,
+
+  initVoices() {
+    if (!this.synth) return;
+    const loadVoices = () => {
+      const voices = this.synth.getVoices();
+      if (!voices.length) return;
+      this.voicesLoaded = true;
+      // Priority: Microsoft > Google > any en-US > any en
+      this.bestVoice =
+        voices.find(v => v.lang.startsWith('en') && v.name.includes('Microsoft') && v.name.includes('Natural')) ||
+        voices.find(v => v.lang.startsWith('en') && v.name.includes('Microsoft')) ||
+        voices.find(v => v.lang.startsWith('en-US') && v.name.includes('Google')) ||
+        voices.find(v => v.lang.startsWith('en-US')) ||
+        voices.find(v => v.lang.startsWith('en')) ||
+        null;
+    };
+    loadVoices();
+    this.synth.onvoiceschanged = loadVoices;
+  },
 
   speak(text, slow) {
-    if (!text) return;
-    // Stop any current playback
-    if (this.audio) { this.audio.pause(); this.audio = null; }
-    // Use Google Translate TTS — natural, standard pronunciation
-    const rate = slow ? 0.3 : 1;
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q=${encodeURIComponent(text)}&ttsspeed=${rate}`;
-    this.audio = new Audio(url);
-    this.audio.play().catch(() => {
-      // Fallback to browser TTS if Google TTS blocked
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'en-US'; u.rate = slow ? 0.7 : 0.9; u.pitch = 1;
-        window.speechSynthesis.speak(u);
-      }
-    });
+    if (!this.synth || !text) return;
+    this.synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    u.rate = slow ? 0.65 : 0.85;
+    u.pitch = 1;
+    if (this.bestVoice) u.voice = this.bestVoice;
+    this.synth.speak(u);
   },
 
   speakSlowly(text) { this.speak(text, true); },
 };
+
+// Init voices
+if (window.speechSynthesis) {
+  SpeechManager.initVoices();
+}
 
 // ============================================================================
 // SENTENCE & PASSAGE GENERATOR
