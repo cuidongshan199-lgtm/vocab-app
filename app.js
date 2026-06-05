@@ -1052,15 +1052,15 @@ async function getPhonetic(word) {
   return '';
 }
 
-async function getPartOfSpeech(word) {
+async function lookupWord(word) {
+  // Use iciba (金山词典) for accurate English-Chinese translation with part of speech
   try {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.toLowerCase().trim())}`);
-    if (!res.ok) return '';
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(`https://dict.iciba.com/dictionary/word/suggestion?word=${encodeURIComponent(word.toLowerCase().trim())}&nums=1`, { signal: controller.signal });
     const data = await res.json();
-    if (data[0] && data[0].meanings && data[0].meanings[0]) {
-      const p = data[0].meanings[0].partOfSpeech;
-      const m = { noun:'名词', verb:'动词', adjective:'形容词', adverb:'副词', preposition:'介词', conjunction:'连词', pronoun:'代词', interjection:'感叹词' };
-      return m[p] || '';
+    if (data.status === 1 && data.message && data.message[0] && data.message[0].paraphrase) {
+      return data.message[0].paraphrase; // e.g. "v.使生气,惹恼"
     }
   } catch(e) {}
   return '';
@@ -1068,6 +1068,12 @@ async function getPartOfSpeech(word) {
 
 async function translateText(text, from, to) {
   if (!text || text.length < 2) return '';
+  // For single English words, use iciba first
+  if (from === 'en' && !text.includes(' ')) {
+    const iciba = await lookupWord(text);
+    if (iciba) return iciba;
+  }
+  // Fallback to MyMemory for sentences or if iciba fails
   const sl = from === 'en' ? 'en' : 'zh-CN';
   const tl = to === 'en' ? 'en' : 'zh-CN';
   try {
@@ -1105,21 +1111,15 @@ function setupAutoTranslate() {
     const val = enInput.value.trim();
     if (!val || val.length < 2) { showHint(''); return; }
     if (!isEnglish(val)) return;
-    showHint('🔄 翻译中...');
+    showHint('🔄 查询中...');
     translateTimer = setTimeout(async () => {
-      const [result, pos] = await Promise.all([
-        translateText(val, 'en', 'zh-CN'),
-        getPartOfSpeech(val)
-      ]);
+      const result = await translateText(val, 'en', 'zh-CN');
       if (result) {
-        cnInput.value = pos ? pos + ' ' + result : result;
-        showHint('✅ 已翻译，可修改');
+        cnInput.value = result;
+        showHint('✅ 已填入，可修改');
         setTimeout(() => showHint(''), 1500);
-      } else if (pos) {
-        cnInput.value = pos;
-        showHint('⚠️ 翻译失败，已填入词性');
       } else {
-        showHint('翻译失败，请手动输入');
+        showHint('查询失败，请手动输入');
       }
     }, 500);
   });
