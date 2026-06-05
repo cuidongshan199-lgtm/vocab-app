@@ -1154,6 +1154,8 @@ function setupAutoTranslate() {
     const val = cnInput.value.trim();
     if (!val || val.length < 1) { showHint(''); return; }
     if (isEnglish(val)) return;
+    // Only auto-translate to English if English field is empty
+    if (enInput.value.trim()) return;
     showHint('🔄 翻译中...');
     translateTimer = setTimeout(async () => {
       const result = await translateText(val, 'zh-CN', 'en');
