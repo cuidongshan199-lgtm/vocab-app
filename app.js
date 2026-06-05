@@ -423,47 +423,44 @@ const DataManager = {
 // SPEECH
 // ============================================================================
 const SpeechManager = {
-  synth: window.speechSynthesis,
-  bestVoice: null,
-  voicesLoaded: false,
-
-  initVoices() {
-    if (!this.synth) return;
-    const loadVoices = () => {
-      const voices = this.synth.getVoices();
-      if (!voices.length) return;
-      this.voicesLoaded = true;
-      // Priority: Microsoft > Google > any en-US > any en
-      this.bestVoice =
-        voices.find(v => v.lang.startsWith('en') && v.name.includes('Microsoft') && v.name.includes('Natural')) ||
-        voices.find(v => v.lang.startsWith('en') && v.name.includes('Microsoft')) ||
-        voices.find(v => v.lang.startsWith('en-US') && v.name.includes('Google')) ||
-        voices.find(v => v.lang.startsWith('en-US')) ||
-        voices.find(v => v.lang.startsWith('en')) ||
-        null;
-    };
-    loadVoices();
-    this.synth.onvoiceschanged = loadVoices;
-  },
+  audio: null,
 
   speak(text, slow) {
-    if (!this.synth || !text) return;
-    this.synth.cancel();
+    if (!text) return;
+    if (this.audio) { this.audio.pause(); this.audio = null; }
+
+    // Try Google Translate TTS first (best quality, works on all devices)
+    const speed = slow ? '0.3' : '0.8';
+    const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q=${encodeURIComponent(text)}&ttsspeed=${speed}`;
+
+    this.audio = new Audio(googleUrl);
+    this.audio.onerror = () => {
+      // Fallback: browser speechSynthesis
+      this._fallbackSpeak(text, slow);
+    };
+    this.audio.play().catch(() => {
+      this._fallbackSpeak(text, slow);
+    });
+  },
+
+  _fallbackSpeak(text, slow) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'en-US';
-    u.rate = slow ? 0.65 : 0.85;
+    u.rate = slow ? 0.6 : 0.85;
     u.pitch = 1;
-    if (this.bestVoice) u.voice = this.bestVoice;
-    this.synth.speak(u);
+    // Try to get best voice
+    const voices = window.speechSynthesis.getVoices();
+    const v = voices.find(x => x.lang.startsWith('en') && x.name.includes('Microsoft'))
+      || voices.find(x => x.lang.startsWith('en-US'))
+      || voices.find(x => x.lang.startsWith('en'));
+    if (v) u.voice = v;
+    window.speechSynthesis.speak(u);
   },
 
   speakSlowly(text) { this.speak(text, true); },
 };
-
-// Init voices
-if (window.speechSynthesis) {
-  SpeechManager.initVoices();
-}
 
 // ============================================================================
 // SENTENCE & PASSAGE GENERATOR
