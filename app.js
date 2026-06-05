@@ -1093,8 +1093,11 @@ async function translateText(text, from, to) {
     // Clean up results: remove English parts, keep only Chinese
     function cleanResult(r) {
       if (!r) return '';
-      // Remove common English artifacts
-      return r.replace(/\(.*?\)/g, '').replace(/meaning|means|definition/gi, '').trim();
+      return r.replace(/\(.*?\)/g, '')
+        .replace(/meaning|means|definition/gi, '')
+        .replace(/的含义|的意思|的定义|的含义是|的意思是|的定义是/g, '')
+        .replace(/^的+|的+$/g, '')
+        .trim();
     }
 
     const results = [cleanResult(r1), cleanResult(r2), cleanResult(r3)].filter(r => r && r.length > 0 && /[一-鿿]/.test(r));
