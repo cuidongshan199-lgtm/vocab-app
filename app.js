@@ -1056,18 +1056,62 @@ async function translateText(text, from, to) {
   if (!text || text.length < 2) return '';
   const sl = from === 'en' ? 'en' : 'zh-CN';
   const tl = to === 'en' ? 'en' : 'zh-CN';
-  try {
+
+  // For single English words, use multiple strategies for accuracy
+  const isSingleWord = from === 'en' && !text.includes(' ');
+
+  async function myMemory(query) {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sl}|${tl}`, { signal: controller.signal });
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(query)}&langpair=${sl}|${tl}`, { signal: controller.signal });
     const data = await res.json();
     if (data.responseStatus === 200 && data.responseData) {
-      const result = data.responseData.translatedText;
-      // MyMemory sometimes returns the original text if translation fails
-      if (result && result.toLowerCase() !== text.toLowerCase()) return result;
+      const r = data.responseData.translatedText;
+      if (r && r.toLowerCase() !== query.toLowerCase()) return r;
     }
-  } catch(e) {}
-  return '';
+    return '';
+  }
+
+  if (isSingleWord) {
+    // Strategy 1: translate with context
+    const r1 = await myMemory(text + ' meaning');
+    // Strategy 2: translate word directly
+    const r2 = await myMemory(text);
+    // Strategy 3: get dictionary definition and translate it
+    let r3 = '';
+    try {
+      const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(text)}`);
+      if (dictRes.ok) {
+        const dictData = await dictRes.json();
+        if (dictData[0] && dictData[0].meanings && dictData[0].meanings[0]) {
+          const def = dictData[0].meanings[0].definitions[0].definition;
+          r3 = await myMemory(def);
+        }
+      }
+    } catch(e) {}
+
+    // Clean up results: remove English parts, keep only Chinese
+    function cleanResult(r) {
+      if (!r) return '';
+      // Remove common English artifacts
+      return r.replace(/\(.*?\)/g, '').replace(/meaning|means|definition/gi, '').trim();
+    }
+
+    const results = [cleanResult(r1), cleanResult(r2), cleanResult(r3)].filter(r => r && r.length > 0 && /[一-鿿]/.test(r));
+
+    // Pick the most common result, or the first valid one
+    if (results.length > 0) {
+      // If multiple results agree, use that
+      const counts = {};
+      results.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
+      const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+      return best;
+    }
+    return '';
+  }
+
+  // For sentences/phrases, just translate directly
+  return await myMemory(text);
 }
 
 function isEnglish(text) {
