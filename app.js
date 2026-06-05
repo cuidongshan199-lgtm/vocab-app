@@ -1109,7 +1109,7 @@ async function translateText(text, from, to) {
       if (!r) return '';
       return r.replace(/\(.*?\)/g, '')
         .replace(/meaning|means|definition/gi, '')
-        .replace(/的含义|的意思|的定义|的含义是|的意思是|的定义是|是指|就是|意味著|意味着|意思|含义|释义|定义/g, '')
+        .replace(/的含义|的意思|的定义|的含义是|的意思是|的定义是|是指|就是|意味著|意味着|意思|含义|释义|定义|意义|之意/g, '')
         .replace(/^的+|的+$/g, '')
         .replace(/^[，,。.、\s]+|[，,。.、\s]+$/g, '')
         .trim();
