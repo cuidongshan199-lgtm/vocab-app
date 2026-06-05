@@ -185,7 +185,9 @@ function todayStr() {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 function dateDiffDays(d1, d2) {
-  return Math.floor((new Date(d2).getTime() - new Date(d1).getTime()) / 86400000);
+  const [y1, m1, dd1] = d1.split('-').map(Number);
+  const [y2, m2, dd2] = d2.split('-').map(Number);
+  return Math.floor((new Date(y2, m2 - 1, dd2) - new Date(y1, m1 - 1, dd1)) / 86400000);
 }
 function shuffle(arr) { const a = arr.slice(); for (let i = a.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function pickRandom(arr, n) { return shuffle(arr).slice(0, n); }
@@ -327,6 +329,7 @@ const Auth = {
     localStorage.removeItem('vocab_state_cache');
     appData.words = [];
     appData.state = getCachedState();
+    this.showAuthScreen();
   },
 };
 
@@ -352,6 +355,7 @@ const DataManager = {
   async addWord(english, chinese, breakdown) {
     const user = await authGetUser();
     const uid = user ? user.id : null;
+    if (!uid) { alert('请先登录'); return null; }
     const word = {
       id: uuid(), user_id: uid,
       english: english.trim(), chinese: chinese.trim(), breakdown: breakdown.trim(),
@@ -381,7 +385,8 @@ const DataManager = {
   getStreak(state) {
     if (!state.checkInDates.length) return 0;
     const dates = [...state.checkInDates].sort();
-    let streak = 0, check = new Date(todayStr());
+    const now = new Date();
+    let streak = 0, check = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     for (let i = dates.length - 1; i >= 0; i--) {
       const expected = check.getFullYear()+'-'+String(check.getMonth()+1).padStart(2,'0')+'-'+String(check.getDate()).padStart(2,'0');
       if (dates[i] === expected) { streak++; check.setDate(check.getDate()-1); }
@@ -403,7 +408,9 @@ const DataManager = {
     try {
       const data = JSON.parse(jsonStr);
       if (!data.words || !Array.isArray(data.words)) throw new Error('格式错误');
-      for (const w of data.words) { try { await saveWord(w); } catch(e) {} }
+      const user = await authGetUser();
+      const uid = user ? user.id : null;
+      for (const w of data.words) { w.user_id = uid; try { await saveWord(w); } catch(e) {} }
       appData.words = await fetchWords();
       if (data.state) { appData.state = Object.assign(appData.state, data.state); await this.syncState(appData.state); }
       cacheWordsLocal(appData.words);
@@ -416,27 +423,29 @@ const DataManager = {
 // SPEECH
 // ============================================================================
 const SpeechManager = {
-  synth: window.speechSynthesis,
-  isAvailable() { return !!this.synth; },
-  speak(text, rate = 0.9) {
-    if (!this.isAvailable()) return null;
-    this.synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US'; u.rate = rate; u.pitch = 1;
-    const voices = this.synth.getVoices();
-    const v = voices.find(x => x.lang.startsWith('en') && x.name.includes('Google'))
-      || voices.find(x => x.lang.startsWith('en-US'))
-      || voices.find(x => x.lang.startsWith('en'));
-    if (v) u.voice = v;
-    this.synth.speak(u);
-    return u;
+  audio: null,
+
+  speak(text, slow) {
+    if (!text) return;
+    // Stop any current playback
+    if (this.audio) { this.audio.pause(); this.audio = null; }
+    // Use Google Translate TTS — natural, standard pronunciation
+    const rate = slow ? 0.3 : 1;
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q=${encodeURIComponent(text)}&ttsspeed=${rate}`;
+    this.audio = new Audio(url);
+    this.audio.play().catch(() => {
+      // Fallback to browser TTS if Google TTS blocked
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'en-US'; u.rate = slow ? 0.7 : 0.9; u.pitch = 1;
+        window.speechSynthesis.speak(u);
+      }
+    });
   },
-  speakSlowly(text) { return this.speak(text, 0.7); },
+
+  speakSlowly(text) { this.speak(text, true); },
 };
-if (window.speechSynthesis) {
-  window.speechSynthesis.getVoices();
-  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-}
 
 // ============================================================================
 // SENTENCE & PASSAGE GENERATOR
@@ -750,7 +759,7 @@ const UI = {
       });
     });
     const listenBtn = el('btn-listen-q');
-    if (listenBtn) { listenBtn.addEventListener('click', () => SpeechManager.speakSlowly(q.audioWord)); setTimeout(() => SpeechManager.speakSlowly(q.audioWord), 300); }
+    if (listenBtn) { listenBtn.addEventListener('click', () => { SpeechManager.speakSlowly(q.audioWord); setTimeout(() => SpeechManager.speakSlowly(q.audioWord), 300); }); }
     const submitBtn = el('btn-submit');
     const quizInput = el('quiz-input');
     if (submitBtn && quizInput) {
