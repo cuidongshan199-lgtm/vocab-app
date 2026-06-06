@@ -353,16 +353,22 @@ const DataManager = {
   },
 
   async addWord(english, chinese, breakdown) {
-    const user = await authGetUser();
-    const uid = user ? user.id : null;
-    if (!uid) { alert('请先登录'); return null; }
+    let user = await authGetUser();
+    if (!user) { await authRefresh(); user = await authGetUser(); }
+    if (!user) { alert('登录已过期，请重新登录'); return null; }
     const word = {
-      id: uuid(), user_id: uid,
+      id: uuid(), user_id: user.id,
       english: english.trim(), chinese: chinese.trim(), breakdown: breakdown.trim(),
       status: 'new', correctStreak: 0, totalCorrect: 0, totalWrong: 0,
       lastCorrectDate: null, lastAnswerCorrect: false, masteredAt: null, createdAt: new Date().toISOString(),
     };
-    try { await saveWord(word); } catch(e) { console.error('Save word error:', e); }
+    try {
+      await saveWord(word);
+    } catch(e) {
+      console.error('Save word error:', e);
+      alert('保存失败，请检查网络后重试');
+      return null;
+    }
     appData.words.unshift(word);
     cacheWordsLocal(appData.words);
     return word;
