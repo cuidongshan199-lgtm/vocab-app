@@ -429,44 +429,40 @@ const DataManager = {
 // SPEECH
 // ============================================================================
 const SpeechManager = {
-  audio: null,
+  synth: window.speechSynthesis,
+  bestVoice: null,
+
+  init() {
+    if (!this.synth) return;
+    const pick = () => {
+      const v = this.synth.getVoices();
+      if (!v.length) return;
+      this.bestVoice =
+        v.find(x => x.lang.startsWith('en') && x.name.includes('Google')) ||
+        v.find(x => x.lang.startsWith('en-US')) ||
+        v.find(x => x.lang.startsWith('en')) ||
+        null;
+    };
+    pick();
+    this.synth.onvoiceschanged = pick;
+  },
 
   speak(text, slow) {
     if (!text) return;
-    if (this.audio) { this.audio.pause(); this.audio = null; }
-
-    // Try Google Translate TTS first (best quality, works on all devices)
-    const speed = slow ? '0.3' : '0.8';
-    const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q=${encodeURIComponent(text)}&ttsspeed=${speed}`;
-
-    this.audio = new Audio(googleUrl);
-    this.audio.onerror = () => {
-      // Fallback: browser speechSynthesis
-      this._fallbackSpeak(text, slow);
-    };
-    this.audio.play().catch(() => {
-      this._fallbackSpeak(text, slow);
-    });
-  },
-
-  _fallbackSpeak(text, slow) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
+    if (!this.synth) return;
+    this.synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'en-US';
     u.rate = slow ? 0.6 : 0.85;
     u.pitch = 1;
-    // Try to get best voice
-    const voices = window.speechSynthesis.getVoices();
-    const v = voices.find(x => x.lang.startsWith('en') && x.name.includes('Microsoft'))
-      || voices.find(x => x.lang.startsWith('en-US'))
-      || voices.find(x => x.lang.startsWith('en'));
-    if (v) u.voice = v;
-    window.speechSynthesis.speak(u);
+    if (this.bestVoice) u.voice = this.bestVoice;
+    this.synth.speak(u);
   },
 
   speakSlowly(text) { this.speak(text, true); },
 };
+
+SpeechManager.init();
 
 // ============================================================================
 // SENTENCE & PASSAGE GENERATOR
