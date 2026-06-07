@@ -457,20 +457,34 @@ const SpeechManager = {
     return '';
   },
 
+  preload(word) {
+    // Pre-fetch audio URL in background, no playback
+    this.getAudioUrl(word);
+  },
+
   async speak(text, slow) {
     if (!text) return;
     if (this.audio) { this.audio.pause(); this.audio = null; }
 
-    // Try dictionary audio first (real human recording)
-    const audioUrl = await this.getAudioUrl(text);
-    if (audioUrl) {
-      this.audio = new Audio(audioUrl);
+    // If already cached, play immediately
+    const w = text.toLowerCase().trim();
+    if (this.audioCache[w]) {
+      this.audio = new Audio(this.audioCache[w]);
       if (slow) this.audio.playbackRate = 0.7;
-      this.audio.play().catch(() => this._browserSpeak(text, slow));
+      this.audio.play();
       return;
     }
-    // Fallback to browser TTS
+
+    // Not cached: play browser TTS immediately, then load real audio
     this._browserSpeak(text, slow);
+    const audioUrl = await this.getAudioUrl(text);
+    if (audioUrl) {
+      // Stop browser TTS and play real audio
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      this.audio = new Audio(audioUrl);
+      if (slow) this.audio.playbackRate = 0.7;
+      this.audio.play().catch(() => {});
+    }
   },
 
   _browserSpeak(text, slow) {
@@ -952,12 +966,13 @@ const UI = {
         const phId = 'ph-'+w.id;
         return '<div class="word-card" id="word-card-'+w.id+'" data-id="'+w.id+'"><div class="word-card-header"><div class="word-card-main" data-action="expand" data-id="'+w.id+'"><div class="word-card-english">'+w.english+' <span class="phonetic" id="'+phId+'"></span></div><div class="word-card-chinese">'+w.chinese+'</div></div><div class="word-card-actions"><button class="card-action-btn" data-action="speak" data-id="'+w.id+'" title="朗读">🔊</button><button class="card-action-btn delete" data-action="delete" data-id="'+w.id+'" title="删除">🗑️</button></div></div><div class="progress-bar-wrap"><div class="progress-bar-fill'+pc+'" style="width:'+pct+'%;"></div></div><div class="word-detail" id="detail-'+w.id+'">'+(w.breakdown?'<div class="word-detail-row"><div class="word-detail-label">词根词缀拆解</div><div>'+w.breakdown+'</div></div>':'')+'<div class="word-detail-row"><div class="word-detail-label">学习记录</div><div>✅ 答对 <strong>'+w.totalCorrect+'</strong> 次 &nbsp; ❌ 答错 <strong>'+w.totalWrong+'</strong> 次</div><div>熟练度：<strong>'+pct+'%</strong> &nbsp; 连续答对：<strong>'+w.correctStreak+'/3</strong></div></div><div class="word-detail-row"><div class="word-detail-label">例句</div><div class="example-sentences" id="examples-'+w.id+'">'+generateExampleSentences(w.english).map(s => '<div class="example-sentence">'+s.html+'</div>').join('')+'</div></div><button class="detail-listen-btn" data-action="speak" data-id="'+w.id+'">🔊 朗读</button></div></div>';
       }).join('');
-      // Fetch phonetics for displayed words
+      // Fetch phonetics and preload audio for displayed words
       filtered.forEach(w => {
         getPhonetic(w.english).then(ph => {
           const el = document.getElementById('ph-'+w.id);
           if (el && ph) el.textContent = ph;
         });
+        SpeechManager.preload(w.english);
       });
     }
     el('wb-tab-new').textContent = '🌱 生词库 ('+appData.words.filter(w=>w.status==='new').length+')';
