@@ -429,40 +429,63 @@ const DataManager = {
 // SPEECH
 // ============================================================================
 const SpeechManager = {
-  synth: window.speechSynthesis,
-  bestVoice: null,
+  audioCache: {},
+  audio: null,
 
-  init() {
-    if (!this.synth) return;
-    const pick = () => {
-      const v = this.synth.getVoices();
-      if (!v.length) return;
-      this.bestVoice =
-        v.find(x => x.lang.startsWith('en') && x.name.includes('Google')) ||
-        v.find(x => x.lang.startsWith('en-US')) ||
-        v.find(x => x.lang.startsWith('en')) ||
-        null;
-    };
-    pick();
-    this.synth.onvoiceschanged = pick;
+  async getAudioUrl(word) {
+    const w = word.toLowerCase().trim();
+    if (this.audioCache[w]) return this.audioCache[w];
+    try {
+      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(w)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data[0] && data[0].phonetics) {
+          // Prefer US English audio, then UK, then any
+          for (const p of data[0].phonetics) {
+            if (p.audio && p.audio.includes('-us')) { this.audioCache[w] = p.audio; return p.audio; }
+          }
+          for (const p of data[0].phonetics) {
+            if (p.audio && p.audio.includes('-uk')) { this.audioCache[w] = p.audio; return p.audio; }
+          }
+          for (const p of data[0].phonetics) {
+            if (p.audio) { this.audioCache[w] = p.audio; return p.audio; }
+          }
+        }
+      }
+    } catch(e) {}
+    this.audioCache[w] = '';
+    return '';
   },
 
-  speak(text, slow) {
+  async speak(text, slow) {
     if (!text) return;
-    if (!this.synth) return;
-    this.synth.cancel();
+    if (this.audio) { this.audio.pause(); this.audio = null; }
+
+    // Try dictionary audio first (real human recording)
+    const audioUrl = await this.getAudioUrl(text);
+    if (audioUrl) {
+      this.audio = new Audio(audioUrl);
+      if (slow) this.audio.playbackRate = 0.7;
+      this.audio.play().catch(() => this._browserSpeak(text, slow));
+      return;
+    }
+    // Fallback to browser TTS
+    this._browserSpeak(text, slow);
+  },
+
+  _browserSpeak(text, slow) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
-    u.rate = slow ? 0.6 : 0.85;
-    u.pitch = 1;
-    if (this.bestVoice) u.voice = this.bestVoice;
-    this.synth.speak(u);
+    u.lang = 'en-US'; u.rate = slow ? 0.6 : 0.85; u.pitch = 1;
+    const v = window.speechSynthesis.getVoices();
+    const voice = v.find(x => x.lang.startsWith('en') && x.name.includes('Google')) || v.find(x => x.lang.startsWith('en-US')) || v.find(x => x.lang.startsWith('en'));
+    if (voice) u.voice = voice;
+    window.speechSynthesis.speak(u);
   },
 
   speakSlowly(text) { this.speak(text, true); },
 };
-
-SpeechManager.init();
 
 // ============================================================================
 // SENTENCE & PASSAGE GENERATOR
