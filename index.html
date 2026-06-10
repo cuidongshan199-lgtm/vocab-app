@@ -664,6 +664,64 @@ input, textarea { width: 100%; }
 .word-card-main { flex: 1; min-width: 0; cursor: pointer; }
 .word-card-english { font-size: 19px; font-weight: 800; color: var(--text); letter-spacing: -0.2px; }
 .phonetic { font-size: 14px; font-weight: 500; color: var(--text-tertiary); margin-left: 6px; font-style: italic; }
+
+/* Dictation */
+.dictation-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; margin-bottom: 12px;
+  background: var(--primary-soft); border-radius: var(--radius-sm);
+  border: 1px solid var(--primary-light);
+}
+.dictation-count { font-size: 14px; font-weight: 600; color: var(--primary); flex: 1; }
+.dictation-btn {
+  padding: 8px 14px; border-radius: 20px;
+  font-size: 13px; font-weight: 700;
+  background: var(--bg); color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.dictation-btn.primary { background: var(--primary); color: #fff; border: none; }
+.dictation-btn:hover { opacity: 0.85; }
+
+.word-card-check {
+  width: 22px; height: 22px; accent-color: var(--primary);
+  cursor: pointer; flex-shrink: 0;
+}
+
+.dictation-card {
+  background: var(--bg); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow); padding: 24px; margin-top: 16px;
+  border: 1px solid var(--border-light);
+}
+.dictation-progress { font-size: 13px; color: var(--text-secondary); text-align: center; margin-bottom: 12px; }
+.dictation-prompt { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 20px; color: var(--text); }
+.dictation-input-group { margin-bottom: 14px; }
+.dictation-input-group label { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+.dictation-input {
+  width: 100%; padding: 14px 16px; border: 2px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 17px; font-weight: 500;
+  min-height: 48px; background: var(--bg-subtle);
+}
+.dictation-input:focus { border-color: var(--primary); background: var(--bg); }
+.dictation-input.correct { border-color: var(--success); background: var(--success-light); }
+.dictation-input.wrong { border-color: var(--danger); background: var(--danger-light); }
+
+.dictation-actions { display: flex; gap: 10px; margin-top: 16px; }
+.dictation-actions .btn { flex: 1; }
+
+.dictation-result-card {
+  background: var(--bg); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow); padding: 24px; margin-top: 16px;
+  text-align: center;
+}
+.dictation-result-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border-light);
+  font-size: 15px; text-align: left;
+}
+.dictation-result-item:last-child { border-bottom: none; }
+.dictation-result-icon { font-size: 20px; flex-shrink: 0; }
+.dictation-result-word { font-weight: 700; }
+.dictation-result-answer { color: var(--text-secondary); font-size: 13px; }
 .word-card-chinese { font-size: 15px; color: var(--text-secondary); margin-top: 4px; }
 .word-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .card-action-btn {
@@ -1166,7 +1224,14 @@ input, textarea { width: 100%; }
           <input type="text" class="search-input" id="search-input" placeholder="🔍 搜索单词...">
           <button class="add-word-btn" id="btn-add-word">+ 添加</button>
         </div>
+        <div class="dictation-bar" id="dictation-bar" style="display:none;">
+          <span class="dictation-count" id="dictation-count">已选 0 个</span>
+          <button class="dictation-btn" id="btn-select-all">全选</button>
+          <button class="dictation-btn" id="btn-deselect-all">取消</button>
+          <button class="dictation-btn primary" id="btn-start-dictation">🎧 开始听写</button>
+        </div>
         <div class="word-list" id="word-list"></div>
+        <div id="dictation-container"></div>
       </div>
 
       <!-- Stats Panel -->

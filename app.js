@@ -964,7 +964,8 @@ const UI = {
         const pct = total > 0 ? Math.round((w.totalCorrect/total)*100) : 0;
         const pc = w.status === 'mastered' ? ' mastered' : '';
         const phId = 'ph-'+w.id;
-        return '<div class="word-card" id="word-card-'+w.id+'" data-id="'+w.id+'"><div class="word-card-header"><div class="word-card-main" data-action="expand" data-id="'+w.id+'"><div class="word-card-english">'+w.english+' <span class="phonetic" id="'+phId+'"></span></div><div class="word-card-chinese">'+w.chinese+'</div></div><div class="word-card-actions"><button class="card-action-btn" data-action="speak" data-id="'+w.id+'" title="朗读">🔊</button><button class="card-action-btn delete" data-action="delete" data-id="'+w.id+'" title="删除">🗑️</button></div></div><div class="progress-bar-wrap"><div class="progress-bar-fill'+pc+'" style="width:'+pct+'%;"></div></div><div class="word-detail" id="detail-'+w.id+'">'+(w.breakdown?'<div class="word-detail-row"><div class="word-detail-label">词根词缀拆解</div><div>'+w.breakdown+'</div></div>':'')+'<div class="word-detail-row"><div class="word-detail-label">学习记录</div><div>✅ 答对 <strong>'+w.totalCorrect+'</strong> 次 &nbsp; ❌ 答错 <strong>'+w.totalWrong+'</strong> 次</div><div>熟练度：<strong>'+pct+'%</strong> &nbsp; 连续答对：<strong>'+w.correctStreak+'/3</strong></div></div><div class="word-detail-row"><div class="word-detail-label">例句</div><div class="example-sentences" id="examples-'+w.id+'">'+generateExampleSentences(w.english).map(s => '<div class="example-sentence">'+s.html+'</div>').join('')+'</div></div><button class="detail-listen-btn" data-action="speak" data-id="'+w.id+'">🔊 朗读</button></div></div>';
+        const checked = Dictation.selected.has(w.id) ? ' checked' : '';
+        return '<div class="word-card" id="word-card-'+w.id+'" data-id="'+w.id+'"><div class="word-card-header"><input type="checkbox" class="word-card-check" data-check="'+w.id+'"'+checked+' onclick="event.stopPropagation();Dictation.toggle(\''+w.id+'\')"><div class="word-card-main" data-action="expand" data-id="'+w.id+'"><div class="word-card-english">'+w.english+' <span class="phonetic" id="'+phId+'"></span></div><div class="word-card-chinese">'+w.chinese+'</div></div><div class="word-card-actions"><button class="card-action-btn" data-action="speak" data-id="'+w.id+'" title="朗读">🔊</button><button class="card-action-btn delete" data-action="delete" data-id="'+w.id+'" title="删除">🗑️</button></div></div><div class="progress-bar-wrap"><div class="progress-bar-fill'+pc+'" style="width:'+pct+'%;"></div></div><div class="word-detail" id="detail-'+w.id+'">'+(w.breakdown?'<div class="word-detail-row"><div class="word-detail-label">词根词缀拆解</div><div>'+w.breakdown+'</div></div>':'')+'<div class="word-detail-row"><div class="word-detail-label">学习记录</div><div>✅ 答对 <strong>'+w.totalCorrect+'</strong> 次 &nbsp; ❌ 答错 <strong>'+w.totalWrong+'</strong> 次</div><div>熟练度：<strong>'+pct+'%</strong> &nbsp; 连续答对：<strong>'+w.correctStreak+'/3</strong></div></div><div class="word-detail-row"><div class="word-detail-label">例句</div><div class="example-sentences" id="examples-'+w.id+'">'+generateExampleSentences(w.english).map(s => '<div class="example-sentence">'+s.html+'</div>').join('')+'</div></div><button class="detail-listen-btn" data-action="speak" data-id="'+w.id+'">🔊 朗读</button></div></div>';
       }).join('');
       // Fetch phonetics and preload audio for displayed words
       filtered.forEach(w => {
@@ -1061,6 +1062,11 @@ function initEvents() {
     el('modal-add-word').style.display='none';
     UI.renderWordBank();
   });
+
+  // Dictation buttons
+  el('btn-select-all').addEventListener('click', () => Dictation.selectAll(appData.words.filter(w => w.status === appData.currentBankFilter)));
+  el('btn-deselect-all').addEventListener('click', () => Dictation.deselectAll());
+  el('btn-start-dictation').addEventListener('click', () => Dictation.start());
 
   // I/O modal
   el('btn-export').addEventListener('click', () => el('modal-io').style.display='flex');
@@ -1208,6 +1214,183 @@ function setupAutoTranslate() {
     }, 500);
   });
 }
+
+// ============================================================================
+// DICTATION ENGINE
+// ============================================================================
+const Dictation = {
+  selected: new Set(),
+  queue: [],
+  index: 0,
+  results: [],
+  isActive: false,
+
+  toggle(wordId) {
+    if (this.selected.has(wordId)) this.selected.delete(wordId);
+    else this.selected.add(wordId);
+    this.updateBar();
+  },
+
+  selectAll(words) {
+    words.forEach(w => this.selected.add(w.id));
+    this.updateBar();
+  },
+
+  deselectAll() {
+    this.selected.clear();
+    this.updateBar();
+  },
+
+  updateBar() {
+    const bar = el('dictation-bar');
+    const count = el('dictation-count');
+    const container = el('dictation-container');
+    if (!bar) return;
+    if (this.selected.size > 0) {
+      bar.style.display = 'flex';
+      count.textContent = '已选 ' + this.selected.size + ' 个';
+      if (container) container.innerHTML = '';
+    } else {
+      bar.style.display = 'none';
+    }
+  },
+
+  start() {
+    if (this.selected.size === 0) { alert('请先勾选要听写的单词'); return; }
+    this.queue = shuffle(appData.words.filter(w => this.selected.has(w.id)));
+    this.index = 0;
+    this.results = [];
+    this.isActive = true;
+    el('word-list').style.display = 'none';
+    el('dictation-bar').style.display = 'none';
+    el('search-input').parentElement.style.display = 'none';
+    el('wb-tab-new').parentElement.style.display = 'none';
+    this.renderQuestion();
+  },
+
+  renderQuestion() {
+    if (this.index >= this.queue.length) { this.renderResults(); return; }
+    const w = this.queue[this.index];
+    const container = el('dictation-container');
+    container.innerHTML = `
+      <div class="dictation-card animate-pop">
+        <div class="dictation-progress">听写进度 ${this.index + 1} / ${this.queue.length}</div>
+        <button class="listen-btn" id="dictation-listen"><span class="speaker-icon">🔊</span> 点击播放发音（可重复点击）</button>
+        <div class="dictation-input-group">
+          <label>✏️ 写出英文单词</label>
+          <input type="text" class="dictation-input" id="dictation-en" placeholder="输入你听到的英文..." autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="dictation-input-group">
+          <label>📝 写出中文释义</label>
+          <input type="text" class="dictation-input" id="dictation-cn" placeholder="输入中文意思..." autocomplete="off">
+        </div>
+        <div id="dictation-feedback" style="display:none;margin-top:12px;padding:12px;border-radius:10px;font-size:14px;"></div>
+        <div class="dictation-actions">
+          <button class="btn btn-secondary" id="dictation-skip">跳过 ⏭️</button>
+          <button class="btn btn-primary" id="dictation-submit">确认 ✅</button>
+        </div>
+      </div>`;
+
+    // Auto play pronunciation
+    SpeechManager.speak(w.english);
+
+    // Listen button
+    el('dictation-listen').addEventListener('click', () => SpeechManager.speak(w.english));
+
+    // Submit
+    el('dictation-submit').addEventListener('click', () => this.submit());
+    el('dictation-en').addEventListener('keydown', e => { if (e.key === 'Enter') el('dictation-cn').focus(); });
+    el('dictation-cn').addEventListener('keydown', e => { if (e.key === 'Enter') this.submit(); });
+
+    // Skip
+    el('dictation-skip').addEventListener('click', () => {
+      this.results.push({ word: w, enCorrect: false, cnCorrect: false, skipped: true });
+      this.index++;
+      this.renderQuestion();
+    });
+
+    setTimeout(() => el('dictation-en').focus(), 100);
+  },
+
+  submit() {
+    const w = this.queue[this.index];
+    const enInput = el('dictation-en');
+    const cnInput = el('dictation-cn');
+    const fb = el('dictation-feedback');
+    const enVal = enInput.value.trim().toLowerCase();
+    const cnVal = cnInput.value.trim();
+
+    const enCorrect = enVal === w.english.toLowerCase().trim();
+    // Chinese: check if user's input is contained in the answer or vice versa
+    const cnClean = w.chinese.replace(/^[a-zA-Z]+\.\s*/, '').replace(/^n\.\s*|^v\.\s*|^adj\.\s*|^adv\.\s*|^prep\.\s*|^conj\.\s*|^pron\.\s*|^int\.\s*/, '').trim();
+    const cnCorrect = cnVal.length > 0 && (cnClean.includes(cnVal) || cnVal.includes(cnClean) || cnClean.split(/[；;,，、]/).some(s => s.trim() === cnVal));
+
+    enInput.classList.add(enCorrect ? 'correct' : 'wrong');
+    cnInput.classList.add(cnCorrect ? 'correct' : 'wrong');
+
+    if (!enCorrect || !cnCorrect) {
+      fb.style.display = 'block';
+      fb.style.background = 'var(--danger-light)';
+      fb.style.color = 'var(--danger)';
+      let msg = '❌ ';
+      if (!enCorrect) msg += '英文正确答案：<strong>' + w.english + '</strong>  ';
+      if (!cnCorrect) msg += '中文正确答案：<strong>' + w.chinese + '</strong>';
+      fb.innerHTML = msg;
+    } else {
+      fb.style.display = 'block';
+      fb.style.background = 'var(--success-light)';
+      fb.style.color = 'var(--success)';
+      fb.innerHTML = '✅ 完全正确！';
+    }
+
+    this.results.push({ word: w, enCorrect, cnCorrect, skipped: false });
+
+    // Disable inputs
+    enInput.disabled = true;
+    cnInput.disabled = true;
+    el('dictation-submit').disabled = true;
+
+    // Next after delay
+    setTimeout(() => {
+      this.index++;
+      this.renderQuestion();
+    }, enCorrect && cnCorrect ? 800 : 2000);
+  },
+
+  renderResults() {
+    this.isActive = false;
+    const container = el('dictation-container');
+    const correct = this.results.filter(r => r.enCorrect && r.cnCorrect).length;
+    const total = this.results.length;
+
+    let itemsHtml = this.results.map(r => {
+      const icon = r.skipped ? '⏭️' : (r.enCorrect && r.cnCorrect ? '✅' : '❌');
+      const answer = r.skipped || !r.enCorrect || !r.cnCorrect
+        ? '<div class="dictation-result-answer">' + r.word.english + ' — ' + r.word.chinese + '</div>'
+        : '';
+      return '<div class="dictation-result-item"><span class="dictation-result-icon">' + icon + '</span><div><span class="dictation-result-word">' + r.word.english + '</span>' + answer + '</div></div>';
+    }).join('');
+
+    container.innerHTML = `
+      <div class="dictation-result-card animate-pop">
+        <div style="font-size:64px;margin-bottom:12px;">${correct === total ? '🏆' : correct > total/2 ? '👍' : '💪'}</div>
+        <div style="font-size:20px;font-weight:800;margin-bottom:8px;">听写完成</div>
+        <div style="font-size:16px;color:var(--text-secondary);margin-bottom:20px;">${correct} / ${total} 正确</div>
+        <div style="text-align:left;">${itemsHtml}</div>
+        <button class="btn btn-primary" style="width:100%;margin-top:20px;" id="dictation-finish">返回词库</button>
+      </div>`;
+
+    el('dictation-finish').addEventListener('click', () => {
+      container.innerHTML = '';
+      el('word-list').style.display = '';
+      el('search-input').parentElement.style.display = '';
+      el('wb-tab-new').parentElement.style.display = '';
+      this.selected.clear();
+      this.updateBar();
+      UI.renderWordBank();
+    });
+  },
+};
 
 // ============================================================================
 // INITIALIZATION
